@@ -1,0 +1,1562 @@
+###     SCRIPT: Beta diversity for each disorder,internalizing trait/state for SSRIs and PTDs
+###     AUTHOR(S): Siobhan Brushett
+###     PROJECT: PSYCH-MICROBIOME
+###     DESCRIPTION: Beta diversity for each disorder,internalizing trait/state for SSRIs and PTDs, adjusted and unadjusted
+
+
+##Contents of this file
+
+## 0. LOAD AND FORMAT DATA
+## 1. ADONIS MODELS
+## 2. ADONIS OUTPUT: BETA DIVERSITY VARIANCE EXPLAINED (ADJUSTED AND UNADJUSTED MODELS)
+
+#libraries
+library(tidyverse)
+library(vegan) #2.5-7
+
+                ## =============== 0. LOAD AND FORMAT DATA   ================ ##
+
+#load and format phenotype data
+phenotypes = read.csv("27.08.2021_transformed_phenotypes_control.csv", header=T, as.is=T, sep=",", row.names = 1)
+dim(phenotypes)
+
+#factorize and make variables numeric where necessary
+
+#load and format MP3 data
+metaphlan = read.delim("/groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-rgacesa/DAG3_data_ready/DAG3_biobakery_v3_metaphlan3/merged/DAG3_metaphlan3_merged.txt", header=T, as.is=T, sep="\t", comment.char = "#")
+dim(metaphlan)
+
+rownames(metaphlan) = metaphlan[,1]
+
+#remove unnecessary columns - "clade_name" and "clade_taxid" and all samples begining with "MXX..." (test samples)
+metaphlan = metaphlan[,-c(1:237)]
+dim(metaphlan)
+#1764 8396
+
+#transpose metaphlan dataset
+t_metaphlan <- as.data.frame(t(metaphlan))
+dim(t_metaphlan)
+#8396 1764
+
+#remove "_metaphlan" from DAG3_ID to be able to intersect with phenotype data
+rownames(t_metaphlan) = str_remove(rownames(t_metaphlan), "_metaphlan")
+
+t_metaphlan <- t_metaphlan[ order(row.names(t_metaphlan)), ]
+
+#intersect metaphlan data with phenotype data
+samples = intersect(rownames(t_metaphlan), phenotypes$DAG3_sampleID)
+length(samples)
+#7656
+
+metaphlan = t_metaphlan[samples,]
+dim(metaphlan)
+#7656 1764
+
+phenotypes = phenotypes[match(samples, phenotypes$DAG3_sampleID),]
+
+#subset metaphlan data to spp data only
+metaphlan_spp <- metaphlan[, grep(".s__", colnames(metaphlan))]
+dim(metaphlan_spp)
+
+                ## =============== 1. ADONIS MODELS   ================ ##
+
+        #1.1 AnyDep and MDD
+
+#subset phenotype data
+sub_phenotypes <- phenotypes[ , c("MDD_control",
+                                  "AnyDep_control",
+                                  "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                  "CURRENT_TREATMENT.Mental_Health",
+                                  "ANTHRO.AGE", 
+                                  "ANTHRO.Sex",
+                                  "ANTHRO.BMI",
+                                  "META.BATCH",
+                                  "META.DNA.conc.ng.ul",
+                                  "META.DNA.postclean.reads",
+                                  "META.POOP.BristolMean",
+                                  "META.POOP.Freq",
+                                  "MED.MEDS.PPIs_ATC_A02BC")]
+
+#rename subset phenotype data
+sub_phenotypes <- sub_phenotypes %>% rename ("MDD" = "MDD_control",
+                                             "Depression" = "AnyDep_control",
+                                             "SSRI" = "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                             "Pyschotropic_drugs" = "CURRENT_TREATMENT.Mental_Health")
+
+
+        #AnyDep filtering
+depression <- as.data.frame(sub_phenotypes[, -1]) #all factors except MDD
+#7656 x 12
+
+complete_dep = complete.cases(depression)
+length(complete_dep[complete_dep=="TRUE"])
+#5382
+
+metaphlan_dep_filtered = metaphlan_spp[complete_dep,]
+#5382 1117
+
+depression_filtered = depression[complete_dep,]
+#5382 12
+
+#AnyDep adonis: model 1 (covariates)
+adonis_dep_cov <- adonis (metaphlan_dep_filtered ~ depression_filtered$ANTHRO.AGE + 
+                                  depression_filtered$ANTHRO.Sex + 
+                                  depression_filtered$ANTHRO.BMI +
+                                  depression_filtered$META.BATCH + 
+                                  depression_filtered$META.DNA.conc.ng.ul + 
+                                  depression_filtered$META.DNA.postclean.reads +
+                                  depression_filtered$META.POOP.BristolMean + 
+                                  depression_filtered$META.POOP.Freq +
+                                  depression_filtered$MED.MEDS.PPIs_ATC_A02BC)
+
+print(adonis_dep_cov)
+
+
+#AnyDep adonis: model 2 (covariates + disease)
+adonis_dep_disease <- adonis (metaphlan_dep_filtered ~ depression_filtered$ANTHRO.AGE + 
+                                      depression_filtered$ANTHRO.Sex + 
+                                      depression_filtered$ANTHRO.BMI +
+                                      depression_filtered$META.BATCH + 
+                                      depression_filtered$META.DNA.conc.ng.ul + 
+                                      depression_filtered$META.DNA.postclean.reads +
+                                      depression_filtered$META.POOP.BristolMean + 
+                                      depression_filtered$META.POOP.Freq +
+                                      depression_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                      depression_filtered$Depression)
+print(adonis_dep_disease)
+
+#AnyDep adonis: model 3 (covariates + treatment)
+adonis_dep_medication <- adonis (metaphlan_dep_filtered ~ depression_filtered$ANTHRO.AGE + 
+                                         depression_filtered$ANTHRO.Sex + 
+                                         depression_filtered$ANTHRO.BMI +
+                                         depression_filtered$META.BATCH + 
+                                         depression_filtered$META.DNA.conc.ng.ul + 
+                                         depression_filtered$META.DNA.postclean.reads +
+                                         depression_filtered$META.POOP.BristolMean + 
+                                         depression_filtered$META.POOP.Freq +
+                                         depression_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                         depression_filtered$Pyschotropic_drugs)
+
+print(adonis_dep_medication)
+
+#AnyDep adonis: model 4 (covariates + disease + treatment)
+adonis_dep_dis_med_1 <- adonis (metaphlan_dep_filtered ~ depression_filtered$ANTHRO.AGE + 
+                                        depression_filtered$ANTHRO.Sex + 
+                                        depression_filtered$ANTHRO.BMI +
+                                        depression_filtered$META.BATCH + 
+                                        depression_filtered$META.DNA.conc.ng.ul + 
+                                        depression_filtered$META.DNA.postclean.reads +
+                                        depression_filtered$META.POOP.BristolMean + 
+                                        depression_filtered$META.POOP.Freq +
+                                        depression_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        depression_filtered$Depression + 
+                                        depression_filtered$Pyschotropic_drugs)
+
+print(adonis_dep_dis_med_1)
+
+adonis_dep_dis_med_2 <- adonis (metaphlan_dep_filtered ~ depression_filtered$ANTHRO.AGE + 
+                                        depression_filtered$ANTHRO.Sex + 
+                                        depression_filtered$ANTHRO.BMI +
+                                        depression_filtered$META.BATCH + 
+                                        depression_filtered$META.DNA.conc.ng.ul + 
+                                        depression_filtered$META.DNA.postclean.reads +
+                                        depression_filtered$META.POOP.BristolMean + 
+                                        depression_filtered$META.POOP.Freq +
+                                        depression_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        depression_filtered$Pyschotropic_drugs +
+                                        depression_filtered$Depression)
+
+print(adonis_dep_dis_med_2)
+
+#AnyDep adonis: model 5 (covariates + SRI)
+adonis_dep_SRI <- adonis (metaphlan_dep_filtered ~ depression_filtered$ANTHRO.AGE + 
+                                  depression_filtered$ANTHRO.Sex + 
+                                  depression_filtered$ANTHRO.BMI +
+                                  depression_filtered$META.BATCH + 
+                                  depression_filtered$META.DNA.conc.ng.ul + 
+                                  depression_filtered$META.DNA.postclean.reads +
+                                  depression_filtered$META.POOP.BristolMean + 
+                                  depression_filtered$META.POOP.Freq +
+                                  depression_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                  depression_filtered$SSRI)
+
+print(adonis_dep_SRI)
+
+#AnyDep adonis: model 6 (covariates + disease + SRI)
+adonis_dep_dis_SRI_1 <- adonis (metaphlan_dep_filtered ~ depression_filtered$ANTHRO.AGE + 
+                                        depression_filtered$ANTHRO.Sex + 
+                                        depression_filtered$ANTHRO.BMI +
+                                        depression_filtered$META.BATCH + 
+                                        depression_filtered$META.DNA.conc.ng.ul + 
+                                        depression_filtered$META.DNA.postclean.reads +
+                                        depression_filtered$META.POOP.BristolMean + 
+                                        depression_filtered$META.POOP.Freq +
+                                        depression_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        depression_filtered$Depression + 
+                                        depression_filtered$SSRI)
+
+print(adonis_dep_dis_SRI_1)
+
+adonis_dep_dis_SRI_2 <- adonis (metaphlan_dep_filtered ~ depression_filtered$ANTHRO.AGE + 
+                                        depression_filtered$ANTHRO.Sex + 
+                                        depression_filtered$ANTHRO.BMI +
+                                        depression_filtered$META.BATCH + 
+                                        depression_filtered$META.DNA.conc.ng.ul + 
+                                        depression_filtered$META.DNA.postclean.reads +
+                                        depression_filtered$META.POOP.BristolMean + 
+                                        depression_filtered$META.POOP.Freq +
+                                        depression_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        depression_filtered$SSRI + 
+                                        depression_filtered$Depression)
+
+print(adonis_dep_dis_SRI_2)
+
+save(adonis_dep_cov, adonis_dep_disease, adonis_dep_medication, adonis_dep_dis_med_1, adonis_dep_dis_med_2,
+     adonis_dep_SRI, adonis_dep_dis_SRI_1, adonis_dep_dis_SRI_2, file = "adonis_dep_models.Rdata")
+
+
+        #MDD filtering
+mdd <- as.data.frame(sub_phenotypes[, -2]) #all factors except Depression
+#7656   12
+
+complete_mdd = complete.cases(mdd)
+length(complete_mdd[complete_mdd=="TRUE"])
+#5320
+
+metaphlan_mdd_filtered = metaphlan_spp[complete_mdd,]
+#5320 1117
+
+mdd_filtered = mdd[complete_mdd,]
+#5320   12
+
+#MDD adonis: model 1 (covariates)
+adonis_mdd_cov <- adonis (metaphlan_mdd_filtered ~ mdd_filtered$ANTHRO.AGE +
+                                  mdd_filtered$ANTHRO.Sex + 
+                                  mdd_filtered$ANTHRO.BMI +
+                                  mdd_filtered$META.BATCH + 
+                                  mdd_filtered$META.DNA.conc.ng.ul + 
+                                  mdd_filtered$META.DNA.postclean.reads +
+                                  mdd_filtered$META.POOP.BristolMean + 
+                                  mdd_filtered$META.POOP.Freq +
+                                  mdd_filtered$MED.MEDS.PPIs_ATC_A02BC)
+print(adonis_mdd_cov)
+
+
+#MDD adonis: model 2 (covariates + disease)
+adonis_mdd_disease <- adonis (metaphlan_mdd_filtered ~ mdd_filtered$ANTHRO.AGE +
+                                      mdd_filtered$ANTHRO.Sex + 
+                                      mdd_filtered$ANTHRO.BMI +
+                                      mdd_filtered$META.BATCH + 
+                                      mdd_filtered$META.DNA.conc.ng.ul + 
+                                      mdd_filtered$META.DNA.postclean.reads +
+                                      mdd_filtered$META.POOP.BristolMean + 
+                                      mdd_filtered$META.POOP.Freq +
+                                      mdd_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                      mdd_filtered$MDD)
+print(adonis_mdd_disease)
+
+#MDD adonis: model 3 (covariates + treatment)
+adonis_mdd_medication <- adonis (metaphlan_mdd_filtered ~ mdd_filtered$ANTHRO.AGE +
+                                         mdd_filtered$ANTHRO.Sex + 
+                                         mdd_filtered$ANTHRO.BMI +
+                                         mdd_filtered$META.BATCH + 
+                                         mdd_filtered$META.DNA.conc.ng.ul + 
+                                         mdd_filtered$META.DNA.postclean.reads +
+                                         mdd_filtered$META.POOP.BristolMean + 
+                                         mdd_filtered$META.POOP.Freq +
+                                         mdd_filtered$MED.MEDS.PPIs_ATC_A02BC + 
+                                         mdd_filtered$Pyschotropic_drugs)
+
+print(adonis_mdd_medication)
+
+#MDD adonis: model 4 (covariates + disease + treatment)
+adonis_mdd_dis_med_1 <- adonis (metaphlan_mdd_filtered ~ mdd_filtered$ANTHRO.AGE +
+                                        mdd_filtered$ANTHRO.Sex + 
+                                        mdd_filtered$ANTHRO.BMI +
+                                        mdd_filtered$META.BATCH + 
+                                        mdd_filtered$META.DNA.conc.ng.ul + 
+                                        mdd_filtered$META.DNA.postclean.reads +
+                                        mdd_filtered$META.POOP.BristolMean + 
+                                        mdd_filtered$META.POOP.Freq +
+                                        mdd_filtered$MED.MEDS.PPIs_ATC_A02BC + 
+                                        mdd_filtered$MDD + 
+                                        mdd_filtered$Pyschotropic_drugs)
+
+print(adonis_mdd_dis_med_1)
+
+adonis_mdd_dis_med_2 <- adonis (metaphlan_mdd_filtered ~ mdd_filtered$ANTHRO.AGE +
+                                        mdd_filtered$ANTHRO.Sex + 
+                                        mdd_filtered$ANTHRO.BMI +
+                                        mdd_filtered$META.BATCH + 
+                                        mdd_filtered$META.DNA.conc.ng.ul + 
+                                        mdd_filtered$META.DNA.postclean.reads +
+                                        mdd_filtered$META.POOP.BristolMean + 
+                                        mdd_filtered$META.POOP.Freq +
+                                        mdd_filtered$MED.MEDS.PPIs_ATC_A02BC + 
+                                        mdd_filtered$Pyschotropic_drugs +
+                                        mdd_filtered$MDD)
+
+print(adonis_mdd_dis_med_2)
+
+#MDD adonis: model 5 (covariates + SRI)
+adonis_mdd_SRI <- adonis (metaphlan_mdd_filtered ~ mdd_filtered$ANTHRO.AGE +
+                                  mdd_filtered$ANTHRO.Sex + 
+                                  mdd_filtered$ANTHRO.BMI +
+                                  mdd_filtered$META.BATCH + 
+                                  mdd_filtered$META.DNA.conc.ng.ul + 
+                                  mdd_filtered$META.DNA.postclean.reads +
+                                  mdd_filtered$META.POOP.BristolMean + 
+                                  mdd_filtered$META.POOP.Freq +
+                                  mdd_filtered$MED.MEDS.PPIs_ATC_A02BC + 
+                                  mdd_filtered$SSRI)
+
+print(adonis_mdd_SRI)
+
+#MDD adonis: model 6 (covariates + disease + SRI)
+adonis_mdd_dis_SRI_1 <- adonis (metaphlan_mdd_filtered ~ mdd_filtered$ANTHRO.AGE +
+                                        mdd_filtered$ANTHRO.Sex + 
+                                        mdd_filtered$ANTHRO.BMI +
+                                        mdd_filtered$META.BATCH + 
+                                        mdd_filtered$META.DNA.conc.ng.ul + 
+                                        mdd_filtered$META.DNA.postclean.reads +
+                                        mdd_filtered$META.POOP.BristolMean + 
+                                        mdd_filtered$META.POOP.Freq +
+                                        mdd_filtered$MED.MEDS.PPIs_ATC_A02BC + 
+                                        mdd_filtered$MDD + 
+                                        mdd_filtered$SSRI)
+
+print(adonis_mdd_dis_SRI_1)
+
+adonis_mdd_dis_SRI_2 <- adonis (metaphlan_mdd_filtered ~ mdd_filtered$ANTHRO.AGE +
+                                        mdd_filtered$ANTHRO.Sex + 
+                                        mdd_filtered$ANTHRO.BMI +
+                                        mdd_filtered$META.BATCH + 
+                                        mdd_filtered$META.DNA.conc.ng.ul + 
+                                        mdd_filtered$META.DNA.postclean.reads +
+                                        mdd_filtered$META.POOP.BristolMean + 
+                                        mdd_filtered$META.POOP.Freq +
+                                        mdd_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        mdd_filtered$SSRI +
+                                        mdd_filtered$MDD)
+
+print(adonis_mdd_dis_SRI_2)
+
+save(adonis_mdd_cov, adonis_mdd_disease, adonis_mdd_medication, adonis_mdd_dis_med_1, adonis_mdd_dis_med_2,
+     adonis_mdd_SRI, adonis_mdd_dis_SRI_1, adonis_mdd_dis_SRI_2, file = "adonis_mdd_models.Rdata")
+
+
+        #1.2 AnyAnx and GAD
+
+#subset phenotype data
+sub_phenotypes <- phenotypes[ , c("AnyAnx_control",
+                                  "GAD_control",
+                                  "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                  "CURRENT_TREATMENT.Mental_Health",
+                                  "ANTHRO.AGE", 
+                                  "ANTHRO.Sex",
+                                  "ANTHRO.BMI",
+                                  "META.BATCH",
+                                  "META.DNA.conc.ng.ul",
+                                  "META.DNA.postclean.reads",
+                                  "META.POOP.BristolMean",
+                                  "META.POOP.Freq",
+                                  "MED.MEDS.PPIs_ATC_A02BC")]
+
+#rename subset phenotype data
+sub_phenotypes <- sub_phenotypes %>% rename ("GAD" = "GAD_control",
+                                             "Anxiety" = "AnyAnx_control",
+                                             "SSRI" = "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                             "Pyschotropic_drugs" = "CURRENT_TREATMENT.Mental_Health")
+
+        #AnyAnx filtering
+anxiety <- as.data.frame(sub_phenotypes[, -2]) #all factors except GAD
+#7656 x 12
+
+complete_anx = complete.cases(anxiety)
+length(complete_anx[complete_anx=="TRUE"])
+#5534
+
+metaphlan_anx_filtered = metaphlan_spp[complete_anx,]
+#5534 1117
+
+anxiety_filtered = anxiety[complete_anx,]
+#5534    12
+
+#AnyAnx adonis: model 1 (covariates)
+adonis_anx_cov <- adonis (metaphlan_anx_filtered ~ anxiety_filtered$ANTHRO.AGE + 
+                                  anxiety_filtered$ANTHRO.Sex + 
+                                  anxiety_filtered$ANTHRO.BMI +
+                                  anxiety_filtered$META.BATCH + 
+                                  anxiety_filtered$META.DNA.conc.ng.ul + 
+                                  anxiety_filtered$META.DNA.postclean.reads +
+                                  anxiety_filtered$META.POOP.BristolMean + 
+                                  anxiety_filtered$META.POOP.Freq +
+                                  anxiety_filtered$MED.MEDS.PPIs_ATC_A02BC)
+print(adonis_anx_cov)
+
+
+#AnyAnx adonis: model 2 (covariates + disease)
+adonis_anx_disease <- adonis (metaphlan_anx_filtered ~ anxiety_filtered$ANTHRO.AGE + 
+                                      anxiety_filtered$ANTHRO.Sex + 
+                                      anxiety_filtered$ANTHRO.BMI +
+                                      anxiety_filtered$META.BATCH + 
+                                      anxiety_filtered$META.DNA.conc.ng.ul + 
+                                      anxiety_filtered$META.DNA.postclean.reads +
+                                      anxiety_filtered$META.POOP.BristolMean + 
+                                      anxiety_filtered$META.POOP.Freq +
+                                      anxiety_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                      anxiety_filtered$Anxiety)
+print(adonis_anx_disease)
+
+#AnyAnx adonis: model 3 (covariates + treatment)
+adonis_anx_medication <- adonis (metaphlan_anx_filtered ~ anxiety_filtered$ANTHRO.AGE + 
+                                         anxiety_filtered$ANTHRO.Sex + 
+                                         anxiety_filtered$ANTHRO.BMI +
+                                         anxiety_filtered$META.BATCH + 
+                                         anxiety_filtered$META.DNA.conc.ng.ul + 
+                                         anxiety_filtered$META.DNA.postclean.reads +
+                                         anxiety_filtered$META.POOP.BristolMean + 
+                                         anxiety_filtered$META.POOP.Freq +
+                                         anxiety_filtered$MED.MEDS.PPIs_ATC_A02BC + 
+                                         anxiety_filtered$Pyschotropic_drugs)
+
+print(adonis_anx_medication)
+
+#AnyAnx adonis: model 4 (covariates + disease + treatment)
+adonis_anx_dis_med_1 <- adonis (metaphlan_anx_filtered ~ anxiety_filtered$ANTHRO.AGE + 
+                                        anxiety_filtered$ANTHRO.Sex + 
+                                        anxiety_filtered$ANTHRO.BMI +
+                                        anxiety_filtered$META.BATCH + 
+                                        anxiety_filtered$META.DNA.conc.ng.ul + 
+                                        anxiety_filtered$META.DNA.postclean.reads +
+                                        anxiety_filtered$META.POOP.BristolMean + 
+                                        anxiety_filtered$META.POOP.Freq +
+                                        anxiety_filtered$MED.MEDS.PPIs_ATC_A02BC + 
+                                        anxiety_filtered$Anxiety + 
+                                        anxiety_filtered$Pyschotropic_drugs)
+
+print(adonis_anx_dis_med_1)
+
+adonis_anx_dis_med_2 <- adonis (metaphlan_anx_filtered ~ anxiety_filtered$ANTHRO.AGE + 
+                                        anxiety_filtered$ANTHRO.Sex + 
+                                        anxiety_filtered$ANTHRO.BMI +
+                                        anxiety_filtered$META.BATCH + 
+                                        anxiety_filtered$META.DNA.conc.ng.ul + 
+                                        anxiety_filtered$META.DNA.postclean.reads +
+                                        anxiety_filtered$META.POOP.BristolMean + 
+                                        anxiety_filtered$META.POOP.Freq +
+                                        anxiety_filtered$MED.MEDS.PPIs_ATC_A02BC + 
+                                        anxiety_filtered$Pyschotropic_drugs +
+                                        anxiety_filtered$Anxiety)
+
+print(adonis_anx_dis_med_2)
+
+#AnyAnx adonis: model 5 (covariates + SRI)
+adonis_anx_SRI <- adonis (metaphlan_anx_filtered ~ anxiety_filtered$ANTHRO.AGE + 
+                                  anxiety_filtered$ANTHRO.Sex + 
+                                  anxiety_filtered$ANTHRO.BMI +
+                                  anxiety_filtered$META.BATCH + 
+                                  anxiety_filtered$META.DNA.conc.ng.ul + 
+                                  anxiety_filtered$META.DNA.postclean.reads +
+                                  anxiety_filtered$META.POOP.BristolMean + 
+                                  anxiety_filtered$META.POOP.Freq +
+                                  anxiety_filtered$MED.MEDS.PPIs_ATC_A02BC + 
+                                  anxiety_filtered$SSRI)
+
+print(adonis_anx_SRI)
+
+#AnyAnx adonis: model 6 (covariates + disease + SRI)
+adonis_anx_dis_SRI_1 <- adonis (metaphlan_anx_filtered ~ anxiety_filtered$ANTHRO.AGE + 
+                                        anxiety_filtered$ANTHRO.Sex + 
+                                        anxiety_filtered$ANTHRO.BMI +
+                                        anxiety_filtered$META.BATCH + 
+                                        anxiety_filtered$META.DNA.conc.ng.ul + 
+                                        anxiety_filtered$META.DNA.postclean.reads +
+                                        anxiety_filtered$META.POOP.BristolMean + 
+                                        anxiety_filtered$META.POOP.Freq +
+                                        anxiety_filtered$MED.MEDS.PPIs_ATC_A02BC + 
+                                        anxiety_filtered$Anxiety + 
+                                        anxiety_filtered$SSRI)
+
+print(adonis_anx_dis_SRI_1)
+
+adonis_anx_dis_SRI_2 <- adonis (metaphlan_anx_filtered ~ anxiety_filtered$ANTHRO.AGE + 
+                                        anxiety_filtered$ANTHRO.Sex + 
+                                        anxiety_filtered$ANTHRO.BMI +
+                                        anxiety_filtered$META.BATCH + 
+                                        anxiety_filtered$META.DNA.conc.ng.ul + 
+                                        anxiety_filtered$META.DNA.postclean.reads +
+                                        anxiety_filtered$META.POOP.BristolMean + 
+                                        anxiety_filtered$META.POOP.Freq +
+                                        anxiety_filtered$MED.MEDS.PPIs_ATC_A02BC + 
+                                        anxiety_filtered$SSRI +
+                                        anxiety_filtered$Anxiety)
+
+print(adonis_anx_dis_SRI_2)
+
+save(adonis_anx_cov, adonis_anx_disease, adonis_anx_medication, adonis_anx_dis_med_1, adonis_anx_dis_med_2,
+     adonis_anx_SRI, adonis_anx_dis_SRI_1, adonis_anx_dis_SRI_2,  file = "adonis_anx_models.Rdata")
+
+ #GAD filtering
+gad <- as.data.frame(sub_phenotypes[, -1]) #all factors except Anxiety
+#7656 x 12
+
+complete_gad = complete.cases(gad)
+length(complete_gad[complete_gad=="TRUE"])
+#5490
+
+metaphlan_gad_filtered = metaphlan_spp[complete_gad,]
+#5490 1117
+
+gad_filtered = gad[complete_gad,]
+#5490    12
+
+#GAD adonis: model 1 (covariates)
+adonis_gad_cov <- adonis (metaphlan_gad_filtered ~ gad_filtered$ANTHRO.AGE + 
+                                  gad_filtered$ANTHRO.Sex + 
+                                  gad_filtered$ANTHRO.BMI +
+                                  gad_filtered$META.BATCH + 
+                                  gad_filtered$META.DNA.conc.ng.ul + 
+                                  gad_filtered$META.DNA.postclean.reads +
+                                  gad_filtered$META.POOP.BristolMean + 
+                                  gad_filtered$META.POOP.Freq +
+                                  gad_filtered$MED.MEDS.PPIs_ATC_A02BC)
+print(adonis_gad_cov)
+
+
+#GAD adonis: model 2 (covariates + disease)
+adonis_gad_disease <- adonis (metaphlan_gad_filtered ~ gad_filtered$ANTHRO.AGE + 
+                                      gad_filtered$ANTHRO.Sex + 
+                                      gad_filtered$ANTHRO.BMI +
+                                      gad_filtered$META.BATCH + 
+                                      gad_filtered$META.DNA.conc.ng.ul + 
+                                      gad_filtered$META.DNA.postclean.reads +
+                                      gad_filtered$META.POOP.BristolMean + 
+                                      gad_filtered$META.POOP.Freq +
+                                      gad_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                      gad_filtered$GAD)
+print(adonis_gad_disease)
+
+#GAD adonis: model 3 (covariates + treatment)
+adonis_gad_medication <- adonis (metaphlan_gad_filtered ~ gad_filtered$ANTHRO.AGE + 
+                                         gad_filtered$ANTHRO.Sex + 
+                                         gad_filtered$ANTHRO.BMI +
+                                         gad_filtered$META.BATCH + 
+                                         gad_filtered$META.DNA.conc.ng.ul + 
+                                         gad_filtered$META.DNA.postclean.reads +
+                                         gad_filtered$META.POOP.BristolMean + 
+                                         gad_filtered$META.POOP.Freq +
+                                         gad_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                         gad_filtered$Pyschotropic_drugs)
+
+print(adonis_gad_medication)
+
+#GAD adonis: model 4 (covariates + disease + treatment)
+adonis_gad_dis_med_1 <- adonis (metaphlan_gad_filtered ~ gad_filtered$ANTHRO.AGE + 
+                                        gad_filtered$ANTHRO.Sex + 
+                                        gad_filtered$ANTHRO.BMI +
+                                        gad_filtered$META.BATCH + 
+                                        gad_filtered$META.DNA.conc.ng.ul + 
+                                        gad_filtered$META.DNA.postclean.reads +
+                                        gad_filtered$META.POOP.BristolMean + 
+                                        gad_filtered$META.POOP.Freq +
+                                        gad_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        gad_filtered$GAD + 
+                                        gad_filtered$Pyschotropic_drugs)
+
+print(adonis_gad_dis_med_1)
+
+adonis_gad_dis_med_2 <- adonis (metaphlan_gad_filtered ~ gad_filtered$ANTHRO.AGE + 
+                                        gad_filtered$ANTHRO.Sex + 
+                                        gad_filtered$ANTHRO.BMI +
+                                        gad_filtered$META.BATCH + 
+                                        gad_filtered$META.DNA.conc.ng.ul + 
+                                        gad_filtered$META.DNA.postclean.reads +
+                                        gad_filtered$META.POOP.BristolMean + 
+                                        gad_filtered$META.POOP.Freq +
+                                        gad_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        gad_filtered$Pyschotropic_drugs +
+                                        gad_filtered$GAD)
+
+print(adonis_gad_dis_med_2)
+
+#GAD adonis: model 5 (covariates + SRI)
+adonis_gad_SRI <- adonis (metaphlan_gad_filtered ~ gad_filtered$ANTHRO.AGE + 
+                                  gad_filtered$ANTHRO.Sex + 
+                                  gad_filtered$ANTHRO.BMI +
+                                  gad_filtered$META.BATCH + 
+                                  gad_filtered$META.DNA.conc.ng.ul + 
+                                  gad_filtered$META.DNA.postclean.reads +
+                                  gad_filtered$META.POOP.BristolMean + 
+                                  gad_filtered$META.POOP.Freq +
+                                  gad_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                  gad_filtered$SSRI)
+
+print(adonis_gad_SRI)
+
+#GAD adonis: model 6 (covariates + disease + SRI)
+adonis_gad_dis_SRI_1 <- adonis (metaphlan_gad_filtered ~ gad_filtered$ANTHRO.AGE + 
+                                        gad_filtered$ANTHRO.Sex + 
+                                        gad_filtered$ANTHRO.BMI +
+                                        gad_filtered$META.BATCH + 
+                                        gad_filtered$META.DNA.conc.ng.ul + 
+                                        gad_filtered$META.DNA.postclean.reads +
+                                        gad_filtered$META.POOP.BristolMean + 
+                                        gad_filtered$META.POOP.Freq +
+                                        gad_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        gad_filtered$GAD + 
+                                        gad_filtered$SSRI)
+
+print(adonis_gad_dis_SRI_1)
+
+adonis_gad_dis_SRI_2 <- adonis (metaphlan_gad_filtered ~ gad_filtered$ANTHRO.AGE + 
+                                        gad_filtered$ANTHRO.Sex + 
+                                        gad_filtered$ANTHRO.BMI +
+                                        gad_filtered$META.BATCH + 
+                                        gad_filtered$META.DNA.conc.ng.ul + 
+                                        gad_filtered$META.DNA.postclean.reads +
+                                        gad_filtered$META.POOP.BristolMean + 
+                                        gad_filtered$META.POOP.Freq +
+                                        gad_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        gad_filtered$SSRI +
+                                        gad_filtered$GAD)
+
+print(adonis_gad_dis_SRI_2)
+
+save(adonis_gad_cov, adonis_gad_disease, adonis_gad_medication, adonis_gad_dis_med_1, adonis_gad_dis_med_2, 
+     adonis_gad_SRI, adonis_gad_dis_SRI_1, adonis_gad_dis_SRI_2, file = "adonis_gad_models.Rdata")
+
+        #1.3 DYS 
+
+#subset phenotype data
+sub_phenotypes <- phenotypes[ , c("DYS_control",
+                                  #"comorbidity_control", #removed from results because not necessary
+                                  "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                  "CURRENT_TREATMENT.Mental_Health",
+                                  "ANTHRO.AGE", 
+                                  "ANTHRO.Sex",
+                                  "ANTHRO.BMI",
+                                  "META.BATCH",
+                                  "META.DNA.conc.ng.ul",
+                                  "META.DNA.postclean.reads",
+                                  "META.POOP.BristolMean",
+                                  "META.POOP.Freq",
+                                  "MED.MEDS.PPIs_ATC_A02BC")]
+
+#rename subset phenotype data
+sub_phenotypes <- sub_phenotypes %>% rename ("DYS" = "DYS_control",
+                                             #"comorbid" = "comorbidity_control",
+                                             "SSRI" = "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                             "Pyschotropic_drugs" = "CURRENT_TREATMENT.Mental_Health")
+
+#DYS filtering
+dys <- as.data.frame(sub_phenotypes[, -2]) #all factors except comorbid
+#7656 x 12
+
+complete_dys = complete.cases(dys)
+length(complete_dys[complete_dys=="TRUE"])
+#5237
+
+metaphlan_dys_filtered = metaphlan_spp[complete_dys,]
+#5237 1117
+
+dys_filtered = dys[complete_dys,]
+#5237    12
+
+#DYS adonis: model 1 (covariates)
+adonis_dys_cov <- adonis (metaphlan_dys_filtered ~ dys_filtered$ANTHRO.AGE + 
+                                  dys_filtered$ANTHRO.Sex + 
+                                  dys_filtered$ANTHRO.BMI +
+                                  dys_filtered$META.BATCH + 
+                                  dys_filtered$META.DNA.conc.ng.ul + 
+                                  dys_filtered$META.DNA.postclean.reads +
+                                  dys_filtered$META.POOP.BristolMean + 
+                                  dys_filtered$META.POOP.Freq +
+                                  dys_filtered$MED.MEDS.PPIs_ATC_A02BC)
+print(adonis_dys_cov)
+
+#dys adonis: model 2 (covariates + disease)
+adonis_dys_disease <- adonis (metaphlan_dys_filtered ~ dys_filtered$ANTHRO.AGE + 
+                                      dys_filtered$ANTHRO.Sex + 
+                                      dys_filtered$ANTHRO.BMI +
+                                      dys_filtered$META.BATCH + 
+                                      dys_filtered$META.DNA.conc.ng.ul + 
+                                      dys_filtered$META.DNA.postclean.reads +
+                                      dys_filtered$META.POOP.BristolMean + 
+                                      dys_filtered$META.POOP.Freq +
+                                      dys_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                      dys_filtered$DYS)
+print(adonis_dys_disease)
+
+#dys adonis: model 3 (covariates + treatment)
+adonis_dys_medication <- adonis (metaphlan_dys_filtered ~ dys_filtered$ANTHRO.AGE + 
+                                         dys_filtered$ANTHRO.Sex + 
+                                         dys_filtered$ANTHRO.BMI +
+                                         dys_filtered$META.BATCH + 
+                                         dys_filtered$META.DNA.conc.ng.ul + 
+                                         dys_filtered$META.DNA.postclean.reads +
+                                         dys_filtered$META.POOP.BristolMean + 
+                                         dys_filtered$META.POOP.Freq +
+                                         dys_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                         dys_filtered$Pyschotropic_drugs)
+
+print(adonis_dys_medication)
+
+#dys adonis: model 4 (covariates + disease + treatment)
+adonis_dys_dis_med_1 <- adonis (metaphlan_dys_filtered ~ dys_filtered$ANTHRO.AGE + 
+                                        dys_filtered$ANTHRO.Sex + 
+                                        dys_filtered$ANTHRO.BMI +
+                                        dys_filtered$META.BATCH + 
+                                        dys_filtered$META.DNA.conc.ng.ul + 
+                                        dys_filtered$META.DNA.postclean.reads +
+                                        dys_filtered$META.POOP.BristolMean + 
+                                        dys_filtered$META.POOP.Freq +
+                                        dys_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        dys_filtered$DYS + 
+                                        dys_filtered$Pyschotropic_drugs)
+
+print(adonis_dys_dis_med_1)
+
+adonis_dys_dis_med_2 <- adonis (metaphlan_dys_filtered ~ dys_filtered$ANTHRO.AGE + 
+                                        dys_filtered$ANTHRO.Sex + 
+                                        dys_filtered$ANTHRO.BMI +
+                                        dys_filtered$META.BATCH + 
+                                        dys_filtered$META.DNA.conc.ng.ul + 
+                                        dys_filtered$META.DNA.postclean.reads +
+                                        dys_filtered$META.POOP.BristolMean + 
+                                        dys_filtered$META.POOP.Freq +
+                                        dys_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        dys_filtered$Pyschotropic_drugs +
+                                        dys_filtered$DYS)
+
+print(adonis_dys_dis_med_2)
+
+#dys adonis: model 5 (covariates + SRI)
+adonis_dys_SRI <- adonis (metaphlan_dys_filtered ~ dys_filtered$ANTHRO.AGE + 
+                                  dys_filtered$ANTHRO.Sex + 
+                                  dys_filtered$ANTHRO.BMI +
+                                  dys_filtered$META.BATCH + 
+                                  dys_filtered$META.DNA.conc.ng.ul + 
+                                  dys_filtered$META.DNA.postclean.reads +
+                                  dys_filtered$META.POOP.BristolMean + 
+                                  dys_filtered$META.POOP.Freq +
+                                  dys_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                  dys_filtered$SSRI)
+
+print(adonis_dys_SRI)
+
+#dys adonis: model 6 (covariates + disease + SRI)
+adonis_dys_dis_SRI_1 <- adonis (metaphlan_dys_filtered ~ dys_filtered$ANTHRO.AGE + 
+                                        dys_filtered$ANTHRO.Sex + 
+                                        dys_filtered$ANTHRO.BMI +
+                                        dys_filtered$META.BATCH + 
+                                        dys_filtered$META.DNA.conc.ng.ul + 
+                                        dys_filtered$META.DNA.postclean.reads +
+                                        dys_filtered$META.POOP.BristolMean + 
+                                        dys_filtered$META.POOP.Freq +
+                                        dys_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        dys_filtered$DYS + 
+                                        dys_filtered$SSRI)
+
+print(adonis_dys_dis_SRI_1)
+
+adonis_dys_dis_SRI_2 <- adonis (metaphlan_dys_filtered ~ dys_filtered$ANTHRO.AGE + 
+                                        dys_filtered$ANTHRO.Sex + 
+                                        dys_filtered$ANTHRO.BMI +
+                                        dys_filtered$META.BATCH + 
+                                        dys_filtered$META.DNA.conc.ng.ul + 
+                                        dys_filtered$META.DNA.postclean.reads +
+                                        dys_filtered$META.POOP.BristolMean + 
+                                        dys_filtered$META.POOP.Freq +
+                                        dys_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        dys_filtered$SSRI +
+                                        dys_filtered$DYS)
+
+print(adonis_dys_dis_SRI_2)
+
+save(adonis_dys_cov, adonis_dys_disease, adonis_dys_medication, adonis_dys_dis_med_1, adonis_dys_dis_med_2,
+     adonis_dys_SRI, adonis_dys_dis_SRI_1, adonis_dys_dis_SRI_2, file = "adonis_dys_models.Rdata")
+
+        
+        #1.4 LTMDD and LTGAD 
+
+#subset phenotype data
+sub_phenotypes <- phenotypes[ , c("LTMDDonly_control",
+                                  "LTGADonly_control",
+                                  "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                  "CURRENT_TREATMENT.Mental_Health",
+                                  "ANTHRO.AGE", 
+                                  "ANTHRO.Sex",
+                                  "ANTHRO.BMI",
+                                  "META.BATCH",
+                                  "META.DNA.conc.ng.ul",
+                                  "META.DNA.postclean.reads",
+                                  "META.POOP.BristolMean",
+                                  "META.POOP.Freq",
+                                  "MED.MEDS.PPIs_ATC_A02BC")]
+
+#rename subset phenotype data
+sub_phenotypes <- sub_phenotypes %>% rename ("LTMDD" = "LTMDDonly_control",
+                                             "LTGAD" = "LTGADonly_control",
+                                             "SSRI" = "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                             "Pyschotropic_drugs" = "CURRENT_TREATMENT.Mental_Health")
+
+        #LTMDD filtering
+ltmdd <- as.data.frame(sub_phenotypes[, -2]) #all factors except LTGAD
+#7656 x 12
+
+complete_ltmdd = complete.cases(ltmdd)
+length(complete_ltmdd[complete_ltmdd=="TRUE"])
+#5889
+
+metaphlan_ltmdd_filtered = metaphlan_spp[complete_ltmdd,]
+#5889 1117
+
+ltmdd_filtered = ltmdd[complete_ltmdd,]
+#5889    12
+
+#LTMDD adonis: model 1 (covariates)
+adonis_ltmdd_cov <- adonis (metaphlan_ltmdd_filtered ~ ltmdd_filtered$ANTHRO.AGE + 
+                                    ltmdd_filtered$ANTHRO.Sex + 
+                                    ltmdd_filtered$ANTHRO.BMI +
+                                    ltmdd_filtered$META.BATCH + 
+                                    ltmdd_filtered$META.DNA.conc.ng.ul + 
+                                    ltmdd_filtered$META.DNA.postclean.reads +
+                                    ltmdd_filtered$META.POOP.BristolMean + 
+                                    ltmdd_filtered$META.POOP.Freq +
+                                    ltmdd_filtered$MED.MEDS.PPIs_ATC_A02BC)
+print(adonis_ltmdd_cov)
+
+
+#LTMDD adonis: model 2 (covariates + disease)
+adonis_ltmdd_disease <- adonis (metaphlan_ltmdd_filtered ~ ltmdd_filtered$ANTHRO.AGE + 
+                                        ltmdd_filtered$ANTHRO.Sex + 
+                                        ltmdd_filtered$ANTHRO.BMI +
+                                        ltmdd_filtered$META.BATCH + 
+                                        ltmdd_filtered$META.DNA.conc.ng.ul + 
+                                        ltmdd_filtered$META.DNA.postclean.reads +
+                                        ltmdd_filtered$META.POOP.BristolMean + 
+                                        ltmdd_filtered$META.POOP.Freq +
+                                        ltmdd_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        ltmdd_filtered$LTMDD)
+print(adonis_ltmdd_disease)
+
+#LTMDD adonis: model 3 (covariates + treatment)
+adonis_ltmdd_medication <- adonis (metaphlan_ltmdd_filtered ~ ltmdd_filtered$ANTHRO.AGE + 
+                                           ltmdd_filtered$ANTHRO.Sex + 
+                                           ltmdd_filtered$ANTHRO.BMI +
+                                           ltmdd_filtered$META.BATCH + 
+                                           ltmdd_filtered$META.DNA.conc.ng.ul + 
+                                           ltmdd_filtered$META.DNA.postclean.reads +
+                                           ltmdd_filtered$META.POOP.BristolMean + 
+                                           ltmdd_filtered$META.POOP.Freq +
+                                           ltmdd_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                           ltmdd_filtered$Pyschotropic_drugs)
+
+print(adonis_ltmdd_medication)
+
+#LTMDD adonis: model 4 (covariates + disease + treatment)
+adonis_ltmdd_dis_med_1 <- adonis (metaphlan_ltmdd_filtered ~ ltmdd_filtered$ANTHRO.AGE + 
+                                          ltmdd_filtered$ANTHRO.Sex + 
+                                          ltmdd_filtered$ANTHRO.BMI +
+                                          ltmdd_filtered$META.BATCH + 
+                                          ltmdd_filtered$META.DNA.conc.ng.ul + 
+                                          ltmdd_filtered$META.DNA.postclean.reads +
+                                          ltmdd_filtered$META.POOP.BristolMean + 
+                                          ltmdd_filtered$META.POOP.Freq +
+                                          ltmdd_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                          ltmdd_filtered$LTMDD + 
+                                          ltmdd_filtered$Pyschotropic_drugs)
+
+print(adonis_ltmdd_dis_med_1)
+
+adonis_ltmdd_dis_med_2 <- adonis (metaphlan_ltmdd_filtered ~ ltmdd_filtered$ANTHRO.AGE + 
+                                          ltmdd_filtered$ANTHRO.Sex + 
+                                          ltmdd_filtered$ANTHRO.BMI +
+                                          ltmdd_filtered$META.BATCH + 
+                                          ltmdd_filtered$META.DNA.conc.ng.ul + 
+                                          ltmdd_filtered$META.DNA.postclean.reads +
+                                          ltmdd_filtered$META.POOP.BristolMean + 
+                                          ltmdd_filtered$META.POOP.Freq +
+                                          ltmdd_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                          ltmdd_filtered$Pyschotropic_drugs +
+                                          ltmdd_filtered$LTMDD)
+
+print(adonis_ltmdd_dis_med_2)
+
+#LTMDD adonis: model 5 (covariates + SRI)
+adonis_ltmdd_SRI <- adonis (metaphlan_ltmdd_filtered ~ ltmdd_filtered$ANTHRO.AGE + 
+                                    ltmdd_filtered$ANTHRO.Sex + 
+                                    ltmdd_filtered$ANTHRO.BMI +
+                                    ltmdd_filtered$META.BATCH + 
+                                    ltmdd_filtered$META.DNA.conc.ng.ul + 
+                                    ltmdd_filtered$META.DNA.postclean.reads +
+                                    ltmdd_filtered$META.POOP.BristolMean + 
+                                    ltmdd_filtered$META.POOP.Freq +
+                                    ltmdd_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                    ltmdd_filtered$SSRI)
+
+print(adonis_ltmdd_SRI)
+
+#LTMDD adonis: model 6 (covariates + disease + SRI)
+adonis_ltmdd_dis_SRI_1 <- adonis (metaphlan_ltmdd_filtered ~ ltmdd_filtered$ANTHRO.AGE + 
+                                          ltmdd_filtered$ANTHRO.Sex + 
+                                          ltmdd_filtered$ANTHRO.BMI +
+                                          ltmdd_filtered$META.BATCH + 
+                                          ltmdd_filtered$META.DNA.conc.ng.ul + 
+                                          ltmdd_filtered$META.DNA.postclean.reads +
+                                          ltmdd_filtered$META.POOP.BristolMean + 
+                                          ltmdd_filtered$META.POOP.Freq +
+                                          ltmdd_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                          ltmdd_filtered$LTMDD + 
+                                          ltmdd_filtered$SSRI)
+
+print(adonis_ltmdd_dis_SRI_1)
+
+adonis_ltmdd_dis_SRI_2 <- adonis (metaphlan_ltmdd_filtered ~ ltmdd_filtered$ANTHRO.AGE + 
+                                          ltmdd_filtered$ANTHRO.Sex + 
+                                          ltmdd_filtered$ANTHRO.BMI +
+                                          ltmdd_filtered$META.BATCH + 
+                                          ltmdd_filtered$META.DNA.conc.ng.ul + 
+                                          ltmdd_filtered$META.DNA.postclean.reads +
+                                          ltmdd_filtered$META.POOP.BristolMean + 
+                                          ltmdd_filtered$META.POOP.Freq +
+                                          ltmdd_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                          ltmdd_filtered$SSRI +
+                                          ltmdd_filtered$LTMDD)
+
+print(adonis_ltmdd_dis_SRI_2)
+
+save(adonis_ltmdd_cov, adonis_ltmdd_disease, adonis_ltmdd_medication, adonis_ltmdd_dis_med_1, adonis_ltmdd_dis_med_2,
+     adonis_ltmdd_SRI, adonis_ltmdd_dis_SRI_1, adonis_ltmdd_dis_SRI_2, file = "adonis_ltmdd_models.Rdata")
+
+        #LTGAD filtering
+ltgad <- as.data.frame(sub_phenotypes[, -1]) #all factors except LTMDD
+#7656 x 12
+
+complete_ltgad = complete.cases(ltgad)
+length(complete_ltgad[complete_ltgad=="TRUE"])
+#5405
+
+metaphlan_ltgad_filtered = metaphlan_spp[complete_ltgad,]
+#5405 1117
+
+ltgad_filtered = ltgad[complete_ltgad,]
+#5405    12
+
+#LTGAD adonis: model 1 (covariates)
+adonis_ltgad_cov <- adonis (metaphlan_ltgad_filtered ~ ltgad_filtered$ANTHRO.AGE + 
+                                    ltgad_filtered$ANTHRO.Sex + 
+                                    ltgad_filtered$ANTHRO.BMI +
+                                    ltgad_filtered$META.BATCH + 
+                                    ltgad_filtered$META.DNA.conc.ng.ul + 
+                                    ltgad_filtered$META.DNA.postclean.reads +
+                                    ltgad_filtered$META.POOP.BristolMean + 
+                                    ltgad_filtered$META.POOP.Freq +
+                                    ltgad_filtered$MED.MEDS.PPIs_ATC_A02BC)
+print(adonis_ltgad_cov)
+
+
+#LTGAD adonis: model 2 (covariates + disease)
+adonis_ltgad_disease <- adonis (metaphlan_ltgad_filtered ~ ltgad_filtered$ANTHRO.AGE + 
+                                        ltgad_filtered$ANTHRO.Sex + 
+                                        ltgad_filtered$ANTHRO.BMI +
+                                        ltgad_filtered$META.BATCH + 
+                                        ltgad_filtered$META.DNA.conc.ng.ul + 
+                                        ltgad_filtered$META.DNA.postclean.reads +
+                                        ltgad_filtered$META.POOP.BristolMean + 
+                                        ltgad_filtered$META.POOP.Freq +
+                                        ltgad_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                        ltgad_filtered$LTGAD)
+print(adonis_ltgad_disease)
+
+#LTGAD adonis: model 3 (covariates + treatment)
+adonis_ltgad_medication <- adonis (metaphlan_ltgad_filtered ~ ltgad_filtered$ANTHRO.AGE + 
+                                           ltgad_filtered$ANTHRO.Sex + 
+                                           ltgad_filtered$ANTHRO.BMI +
+                                           ltgad_filtered$META.BATCH + 
+                                           ltgad_filtered$META.DNA.conc.ng.ul + 
+                                           ltgad_filtered$META.DNA.postclean.reads +
+                                           ltgad_filtered$META.POOP.BristolMean + 
+                                           ltgad_filtered$META.POOP.Freq +
+                                           ltgad_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                           ltgad_filtered$Pyschotropic_drugs)
+
+print(adonis_ltgad_medication)
+
+#LTGAD adonis: model 4 (covariates + disease + treatment)
+adonis_ltgad_dis_med_1 <- adonis (metaphlan_ltgad_filtered ~ ltgad_filtered$ANTHRO.AGE + 
+                                          ltgad_filtered$ANTHRO.Sex + 
+                                          ltgad_filtered$ANTHRO.BMI +
+                                          ltgad_filtered$META.BATCH + 
+                                          ltgad_filtered$META.DNA.conc.ng.ul + 
+                                          ltgad_filtered$META.DNA.postclean.reads +
+                                          ltgad_filtered$META.POOP.BristolMean + 
+                                          ltgad_filtered$META.POOP.Freq +
+                                          ltgad_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                          ltgad_filtered$LTGAD + 
+                                          ltgad_filtered$Pyschotropic_drugs)
+
+print(adonis_ltgad_dis_med_1)
+
+adonis_ltgad_dis_med_2 <- adonis (metaphlan_ltgad_filtered ~ ltgad_filtered$ANTHRO.AGE + 
+                                          ltgad_filtered$ANTHRO.Sex + 
+                                          ltgad_filtered$ANTHRO.BMI +
+                                          ltgad_filtered$META.BATCH + 
+                                          ltgad_filtered$META.DNA.conc.ng.ul + 
+                                          ltgad_filtered$META.DNA.postclean.reads +
+                                          ltgad_filtered$META.POOP.BristolMean + 
+                                          ltgad_filtered$META.POOP.Freq +
+                                          ltgad_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                          ltgad_filtered$Pyschotropic_drugs +
+                                          ltgad_filtered$LTGAD)
+
+print(adonis_ltgad_dis_med_2)
+
+#LTGAD adonis: model 5 (covariates + SRI)
+adonis_ltgad_SRI <- adonis (metaphlan_ltgad_filtered ~ ltgad_filtered$ANTHRO.AGE + 
+                                    ltgad_filtered$ANTHRO.Sex + 
+                                    ltgad_filtered$ANTHRO.BMI +
+                                    ltgad_filtered$META.BATCH + 
+                                    ltgad_filtered$META.DNA.conc.ng.ul + 
+                                    ltgad_filtered$META.DNA.postclean.reads +
+                                    ltgad_filtered$META.POOP.BristolMean + 
+                                    ltgad_filtered$META.POOP.Freq +
+                                    ltgad_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                    ltgad_filtered$SSRI)
+
+print(adonis_ltgad_SRI)
+
+#LTGAD adonis: model 6 (covariates + disease + SRI)
+adonis_ltgad_dis_SRI_1 <- adonis (metaphlan_ltgad_filtered ~ ltgad_filtered$ANTHRO.AGE + 
+                                          ltgad_filtered$ANTHRO.Sex + 
+                                          ltgad_filtered$ANTHRO.BMI +
+                                          ltgad_filtered$META.BATCH + 
+                                          ltgad_filtered$META.DNA.conc.ng.ul + 
+                                          ltgad_filtered$META.DNA.postclean.reads +
+                                          ltgad_filtered$META.POOP.BristolMean + 
+                                          ltgad_filtered$META.POOP.Freq +
+                                          ltgad_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                          ltgad_filtered$LTGAD + 
+                                          ltgad_filtered$SSRI)
+
+print(adonis_ltgad_dis_SRI_1)
+
+adonis_ltgad_dis_SRI_2 <- adonis (metaphlan_ltgad_filtered ~ ltgad_filtered$ANTHRO.AGE + 
+                                          ltgad_filtered$ANTHRO.Sex + 
+                                          ltgad_filtered$ANTHRO.BMI +
+                                          ltgad_filtered$META.BATCH + 
+                                          ltgad_filtered$META.DNA.conc.ng.ul + 
+                                          ltgad_filtered$META.DNA.postclean.reads +
+                                          ltgad_filtered$META.POOP.BristolMean + 
+                                          ltgad_filtered$META.POOP.Freq +
+                                          ltgad_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                          ltgad_filtered$SSRI +
+                                          ltgad_filtered$LTGAD)
+
+print(adonis_ltgad_dis_SRI_2)
+
+save(adonis_ltgad_cov, adonis_ltgad_disease, adonis_ltgad_medication, adonis_ltgad_dis_med_1, adonis_ltgad_dis_med_2,
+     adonis_ltgad_SRI, adonis_ltgad_dis_SRI_1, adonis_ltgad_dis_SRI_2, file = "adonis_ltgad_models.Rdata")
+
+        #1.5 Neuroticism and Negative affect
+
+#subset phenotype data
+sub_phenotypes <- phenotypes[ , c("NEO.Neuroticism_Complete_1a",
+                                  "NEO.Neuroticism_Complete_1a_tran",
+                                  "PANAS.Negative_Affect_2b",
+                                  "PANAS.Negative_Affect_2b_tran",
+                                  "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                  "CURRENT_TREATMENT.Mental_Health",
+                                  "ANTHRO.AGE", 
+                                  "ANTHRO.Sex",
+                                  "ANTHRO.BMI",
+                                  "META.BATCH",
+                                  "META.DNA.conc.ng.ul",
+                                  "META.DNA.postclean.reads",
+                                  "META.POOP.BristolMean",
+                                  "META.POOP.Freq",
+                                  "MED.MEDS.PPIs_ATC_A02BC")]
+
+#rename subset phenotype data
+sub_phenotypes <- sub_phenotypes %>% rename ("SSRI" = "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                             "Pyschotropic_drugs" = "CURRENT_TREATMENT.Mental_Health")
+
+
+        #neuroticism filtering
+neuroticism <-  as.data.frame(sub_phenotypes[, -c(3,4)]) #all factors except negative affect
+
+complete_neur = complete.cases(neuroticism)
+length(complete_neur[complete_neur=="TRUE"])
+#2294
+
+metaphlan_neur_filtered = metaphlan_spp[complete_neur,]
+#2294 1117
+
+neuro_filtered = neuroticism[complete_neur,]
+#2294  234
+
+#Neuroticism adonis: model 1 (covariates)
+adonis_neo_covariates <- adonis (metaphlan_neur_filtered ~ neuro_filtered$ANTHRO.AGE + 
+                                         neuro_filtered$ANTHRO.Sex + 
+                                         neuro_filtered$ANTHRO.BMI +
+                                         neuro_filtered$META.BATCH + 
+                                         neuro_filtered$META.DNA.conc.ng.ul + 
+                                         neuro_filtered$META.DNA.postclean.reads +
+                                         neuro_filtered$META.POOP.BristolMean + 
+                                         neuro_filtered$META.POOP.Freq +
+                                         neuro_filtered$MED.MEDS.PPIs_ATC_A02BC)
+print(adonis_neo_covariates)
+
+#Neuroticism adonis: model 2 (covariates + neuroticism_untransformed)
+adonis_neo_untr <- adonis (metaphlan_neur_filtered ~ neuro_filtered$ANTHRO.AGE + 
+                                   neuro_filtered$ANTHRO.Sex + 
+                                   neuro_filtered$ANTHRO.BMI +
+                                   neuro_filtered$META.BATCH + 
+                                   neuro_filtered$META.DNA.conc.ng.ul + 
+                                   neuro_filtered$META.DNA.postclean.reads +
+                                   neuro_filtered$META.POOP.BristolMean + 
+                                   neuro_filtered$META.POOP.Freq +
+                                   neuro_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                   neuro_filtered$NEO.Neuroticism_Complete_1a)
+print(adonis_neo_untr)
+
+#Neuroticism adonis: model 3 (covariates + neuroticism_transformed)
+adonis_neo_tran <- adonis (metaphlan_neur_filtered ~ neuro_filtered$ANTHRO.AGE + 
+                                   neuro_filtered$ANTHRO.Sex + 
+                                   neuro_filtered$ANTHRO.BMI +
+                                   neuro_filtered$META.BATCH + 
+                                   neuro_filtered$META.DNA.conc.ng.ul + 
+                                   neuro_filtered$META.DNA.postclean.reads +
+                                   neuro_filtered$META.POOP.BristolMean + 
+                                   neuro_filtered$META.POOP.Freq +
+                                   neuro_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                   neuro_filtered$NEO.Neuroticism_Complete_1a_tran)
+print(adonis_neo_tran)
+
+
+#Neuroticism adonis: model 4 (covariates + neuroticism_transformed + treatment)
+adonis_neo_tran_med_1 <- adonis (metaphlan_neur_filtered ~ neuro_filtered$ANTHRO.AGE + 
+                                         neuro_filtered$ANTHRO.Sex + 
+                                         neuro_filtered$ANTHRO.BMI +
+                                         neuro_filtered$META.BATCH + 
+                                         neuro_filtered$META.DNA.conc.ng.ul + 
+                                         neuro_filtered$META.DNA.postclean.reads +
+                                         neuro_filtered$META.POOP.BristolMean + 
+                                         neuro_filtered$META.POOP.Freq +
+                                         neuro_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                         neuro_filtered$NEO.Neuroticism_Complete_1a_tran + 
+                                         neuro_filtered$Pyschotropic_drugs)
+
+print(adonis_neo_tran_med_1)
+
+adonis_neo_tran_med_2 <- adonis (metaphlan_neur_filtered ~ neuro_filtered$ANTHRO.AGE + 
+                                         neuro_filtered$ANTHRO.Sex + 
+                                         neuro_filtered$ANTHRO.BMI +
+                                         neuro_filtered$META.BATCH + 
+                                         neuro_filtered$META.DNA.conc.ng.ul + 
+                                         neuro_filtered$META.DNA.postclean.reads +
+                                         neuro_filtered$META.POOP.BristolMean + 
+                                         neuro_filtered$META.POOP.Freq +
+                                         neuro_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                         neuro_filtered$Pyschotropic_drugs +
+                                         neuro_filtered$NEO.Neuroticism_Complete_1a_tran)
+
+print(adonis_neo_tran_med_2)
+
+#Neuroticism adonis: model 5 (covariates + Neuroticism transformed + SRI)
+adonis_neo_tran_SRI_1 <- adonis (metaphlan_neur_filtered ~ neuro_filtered$ANTHRO.AGE + 
+                                         neuro_filtered$ANTHRO.Sex + 
+                                         neuro_filtered$ANTHRO.BMI +
+                                         neuro_filtered$META.BATCH + 
+                                         neuro_filtered$META.DNA.conc.ng.ul + 
+                                         neuro_filtered$META.DNA.postclean.reads +
+                                         neuro_filtered$META.POOP.BristolMean + 
+                                         neuro_filtered$META.POOP.Freq +
+                                         neuro_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                         neuro_filtered$NEO.Neuroticism_Complete_1a_tran + 
+                                         neuro_filtered$SSRI)
+
+print(adonis_neo_tran_SRI_1)
+
+adonis_neo_tran_SRI_2 <- adonis (metaphlan_neur_filtered ~ neuro_filtered$ANTHRO.AGE + 
+                                         neuro_filtered$ANTHRO.Sex + 
+                                         neuro_filtered$ANTHRO.BMI +
+                                         neuro_filtered$META.BATCH + 
+                                         neuro_filtered$META.DNA.conc.ng.ul + 
+                                         neuro_filtered$META.DNA.postclean.reads +
+                                         neuro_filtered$META.POOP.BristolMean + 
+                                         neuro_filtered$META.POOP.Freq +
+                                         neuro_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                         neuro_filtered$SSRI + 
+                                         neuro_filtered$NEO.Neuroticism_Complete_1a_tran)
+
+print(adonis_neo_tran_SRI_2)
+
+save(adonis_neo_covariates, adonis_neo_untr, adonis_neo_tran,
+     adonis_neo_tran_med_1, adonis_neo_tran_med_2,
+     adonis_neo_tran_SRI_1, adonis_neo_tran_SRI_2, file = "adonis_neuroticism_models.Rdata")
+
+
+        #Negative Affect filtering
+
+negaff <-  as.data.frame(sub_phenotypes[, -c(1,2)]) #all factors except neuroticism
+
+complete_neg = complete.cases(negaff)
+length(complete_neg[complete_neg=="TRUE"])
+#3835
+
+metaphlan_neg_filtered = metaphlan_spp[complete_neg,]
+#3835 1117
+
+neg_filtered = negaff[complete_neg,]
+#3835  11
+
+#NegAffadonis: model 1 (covariates)
+adonis_negaff_covariates <- adonis (metaphlan_neg_filtered ~ neg_filtered$ANTHRO.AGE + 
+                                            neg_filtered$ANTHRO.Sex + 
+                                            neg_filtered$ANTHRO.BMI +
+                                            neg_filtered$META.BATCH + 
+                                            neg_filtered$META.DNA.conc.ng.ul + 
+                                            neg_filtered$META.DNA.postclean.reads +
+                                            neg_filtered$META.POOP.BristolMean + 
+                                            neg_filtered$META.POOP.Freq +
+                                            neg_filtered$MED.MEDS.PPIs_ATC_A02BC)
+print(adonis_negaff_covariates)
+
+
+#NegAff adonis: model 2 (covariates + negaff_untransformed)
+adonis_negaff_untr <- adonis (metaphlan_neg_filtered ~ neg_filtered$ANTHRO.AGE + 
+                                      neg_filtered$ANTHRO.Sex + 
+                                      neg_filtered$ANTHRO.BMI +
+                                      neg_filtered$META.BATCH + 
+                                      neg_filtered$META.DNA.conc.ng.ul + 
+                                      neg_filtered$META.DNA.postclean.reads +
+                                      neg_filtered$META.POOP.BristolMean + 
+                                      neg_filtered$META.POOP.Freq +
+                                      neg_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                      neg_filtered$PANAS.Negative_Affect_2b)
+print(adonis_negaff_untr)
+
+#NegAff adonis: model 3 (covariates + negaff_transformed)
+adonis_negaff_tran <- adonis (metaphlan_neg_filtered ~ neg_filtered$ANTHRO.AGE + 
+                                      neg_filtered$ANTHRO.Sex + 
+                                      neg_filtered$ANTHRO.BMI +
+                                      neg_filtered$META.BATCH + 
+                                      neg_filtered$META.DNA.conc.ng.ul + 
+                                      neg_filtered$META.DNA.postclean.reads +
+                                      neg_filtered$META.POOP.BristolMean + 
+                                      neg_filtered$META.POOP.Freq +
+                                      neg_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                      neg_filtered$PANAS.Negative_Affect_2b_tran)
+print(adonis_negaff_tran)
+
+#NegAff adonis: model 4 (covariates + NegAff_transformed + treatment)
+adonis_negaff_tran_med_1 <- adonis (metaphlan_neg_filtered ~ neg_filtered$ANTHRO.AGE + 
+                                            neg_filtered$ANTHRO.Sex + 
+                                            neg_filtered$ANTHRO.BMI +
+                                            neg_filtered$META.BATCH + 
+                                            neg_filtered$META.DNA.conc.ng.ul + 
+                                            neg_filtered$META.DNA.postclean.reads +
+                                            neg_filtered$META.POOP.BristolMean + 
+                                            neg_filtered$META.POOP.Freq +
+                                            neg_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                            neg_filtered$PANAS.Negative_Affect_2b_tran + 
+                                            neg_filtered$Pyschotropic_drugs)
+
+print(adonis_negaff_tran_med_1)
+
+adonis_negaff_tran_med_2 <- adonis (metaphlan_neg_filtered ~ neg_filtered$ANTHRO.AGE + 
+                                            neg_filtered$ANTHRO.Sex + 
+                                            neg_filtered$ANTHRO.BMI +
+                                            neg_filtered$META.BATCH + 
+                                            neg_filtered$META.DNA.conc.ng.ul + 
+                                            neg_filtered$META.DNA.postclean.reads +
+                                            neg_filtered$META.POOP.BristolMean + 
+                                            neg_filtered$META.POOP.Freq +
+                                            neg_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                            neg_filtered$Pyschotropic_drugs +
+                                            neg_filtered$PANAS.Negative_Affect_2b_tran)
+
+print(adonis_negaff_tran_med_2)
+
+#NegAff adonis: model 5 (covariates + Neuroticism transformed + SRI)
+adonis_negaff_tran_SRI_1 <- adonis (metaphlan_neg_filtered ~ neg_filtered$ANTHRO.AGE + 
+                                            neg_filtered$ANTHRO.Sex + 
+                                            neg_filtered$ANTHRO.BMI +
+                                            neg_filtered$META.BATCH + 
+                                            neg_filtered$META.DNA.conc.ng.ul + 
+                                            neg_filtered$META.DNA.postclean.reads +
+                                            neg_filtered$META.POOP.BristolMean + 
+                                            neg_filtered$META.POOP.Freq +
+                                            neg_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                            neg_filtered$PANAS.Negative_Affect_2b_tran + 
+                                            neg_filtered$SSRI)
+
+print(adonis_negaff_tran_SRI_1)
+
+adonis_negaff_tran_SRI_2 <- adonis (metaphlan_neg_filtered ~ neg_filtered$ANTHRO.AGE + 
+                                            neg_filtered$ANTHRO.Sex + 
+                                            neg_filtered$ANTHRO.BMI +
+                                            neg_filtered$META.BATCH + 
+                                            neg_filtered$META.DNA.conc.ng.ul + 
+                                            neg_filtered$META.DNA.postclean.reads +
+                                            neg_filtered$META.POOP.BristolMean + 
+                                            neg_filtered$META.POOP.Freq +
+                                            neg_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                                            neg_filtered$SSRI + 
+                                            neg_filtered$PANAS.Negative_Affect_2b_tran)
+
+print(adonis_negaff_tran_SRI_2)
+
+save(adonis_negaff_covariates, adonis_negaff_untr, adonis_negaff_tran,
+     adonis_negaff_tran_med_1, adonis_negaff_tran_med_2,
+     adonis_negaff_tran_SRI_1, adonis_negaff_tran_SRI_2,
+     file = "adonis_negaff_models.Rdata")
+
+
+        #1.6 SSRIs and PTDs
+
+        #filtering SSRIs
+#subset phenotype data
+sub_phenotypes <- phenotypes[ , c("MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                  "ANTHRO.AGE", 
+                                  "ANTHRO.Sex",
+                                  "ANTHRO.BMI",
+                                  "META.BATCH",
+                                  "META.DNA.conc.ng.ul",
+                                  "META.DNA.postclean.reads",
+                                  "META.POOP.BristolMean",
+                                  "META.POOP.Freq",
+                                  "MED.MEDS.PPIs_ATC_A02BC")]
+
+#rename subset phenotype data
+sub_phenotypes <- sub_phenotypes %>% rename ("SSRI" = "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB")
+
+#SSRI filtering
+SSRIs <- as.data.frame(sub_phenotypes)
+#7656 x 10
+
+complete_ssri = complete.cases(SSRIs)
+length(complete_ssri[complete_ssri=="TRUE"])
+#7174
+
+metaphlan_ssri_filtered = metaphlan_spp[complete_ssri,]
+#7174 1117
+
+ssri_filtered = SSRIs[complete_ssri,]
+#7174 10
+
+#SSRI adonis: model 1 (covariates)
+adonis_ssri <- adonis (metaphlan_ssri_filtered ~ ssri_filtered$ANTHRO.AGE + 
+                               ssri_filtered$ANTHRO.Sex + 
+                               ssri_filtered$ANTHRO.BMI +
+                               ssri_filtered$META.BATCH + 
+                               ssri_filtered$META.DNA.conc.ng.ul + 
+                               ssri_filtered$META.DNA.postclean.reads +
+                               ssri_filtered$META.POOP.BristolMean + 
+                               ssri_filtered$META.POOP.Freq +
+                               ssri_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                               ssri_filtered$SSRI)
+
+print(adonis_ssri)
+
+
+        #filtering PTDs
+
+#subset phenotype data
+sub_phenotypes <- phenotypes[ , c("CURRENT_TREATMENT.Mental_Health",
+                                  "ANTHRO.AGE", 
+                                  "ANTHRO.Sex",
+                                  "ANTHRO.BMI",
+                                  "META.BATCH",
+                                  "META.DNA.conc.ng.ul",
+                                  "META.DNA.postclean.reads",
+                                  "META.POOP.BristolMean",
+                                  "META.POOP.Freq",
+                                  "MED.MEDS.PPIs_ATC_A02BC")]
+
+#rename subset phenotype data
+sub_phenotypes <- sub_phenotypes %>% rename ("PTD" = "CURRENT_TREATMENT.Mental_Health")
+
+#Psychotropic drug filtering
+PTDs <- as.data.frame(sub_phenotypes)
+#7656 x 10
+
+complete_ptd = complete.cases(PTDs)
+length(complete_ptd[complete_ptd=="TRUE"])
+#7174
+
+metaphlan_ptd_filtered = metaphlan_spp[complete_ptd,]
+#7174 1117
+
+ptd_filtered = PTDs[complete_ptd,]
+#7174 10
+
+#PTD adonis: model 1 (covariates)
+adonis_ptd <- adonis (metaphlan_ptd_filtered ~ ptd_filtered$ANTHRO.AGE + 
+                              ptd_filtered$ANTHRO.Sex + 
+                              ptd_filtered$ANTHRO.BMI +
+                              ptd_filtered$META.BATCH + 
+                              ptd_filtered$META.DNA.conc.ng.ul + 
+                              ptd_filtered$META.DNA.postclean.reads +
+                              ptd_filtered$META.POOP.BristolMean + 
+                              ptd_filtered$META.POOP.Freq +
+                              ptd_filtered$MED.MEDS.PPIs_ATC_A02BC +
+                              ptd_filtered$PTD)
+
+print(adonis_ptd)
+
+
+save(adonis_ssri, adonis_ptd, file = "adonis_drug_models.Rdata")
+
+                ## =============== 2. ADONIS OUTPUT: BETA DIVERSITY VARIANCE EXPLAINED (ADJUSTED AND UNADJUSTED MODELS) ================ ##
+#load saved Rdata files into environment
+
+        #table 1: unadjusted
+
+#internalizing disorders
+#AnyDep
+AnyDep <- adonis_dep_disease$aov.tab[10,] #depression values
+
+#Dys
+DYS <- adonis_dys_disease$aov.tab[10,]
+
+#MDD
+MDD <- adonis_mdd_disease$aov.tab[10,]
+
+#LTMDD
+LTMDD <- adonis_ltmdd_disease$aov.tab[10,]
+
+#AnyAnx
+AnyAnx <- adonis_anx_disease$aov.tab[10,]
+
+#GAD
+GAD <- adonis_gad_disease$aov.tab[10,]
+
+#LTGAD
+LTGAD <- adonis_ltgad_disease$aov.tab[10,]
+
+#internalizing traits/states
+#Neuroticism
+NEO <- adonis_neo_tran$aov.tab[10,]
+
+#NegAff
+NegAff <- adonis_negaff_tran$aov.tab[10,]
+
+#medications
+#SSRI 
+SSRI <- adonis_ssri$aov.tab[10,]
+
+#PTDs
+PTD <- adonis_ptd$aov.tab[10,]
+
+beta_diversity <- rbind(AnyDep, DYS, MDD, LTMDD,
+                        AnyAnx, GAD, LTGAD,
+                        NEO, NegAff,
+                        SSRI, PTD)
+
+beta_diversity$FDR <- p.adjust(beta_diversity$`Pr(>F)`, method = "BH")
+sum(beta_diversity$FDR<0.05)
+#5
+
+sum(beta_diversity$`Pr(>F)`<0.05)
+#6
+
+write.table(beta_diversity, "beta_diversity_unadjusted.txt",
+            sep="\t", row.names=T, quote = F)
+
+
+        #R2 and pvalues of internalizing disorders and traits/states adjusted for SSRIs
+#AnyDep
+adonis_dep_dis_SRI_2$aov.tab
+adonis_dep_dis_SRI_2$aov.tab[11,]
+#R2 Pr(>F)
+#0.00060959  0.001 ***
+
+#DYS
+adonis_dys_dis_SRI_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00048276  0.003 **
+
+#MDD
+adonis_mdd_dis_SRI_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00033808  0.028 *
+
+#LTMDD
+adonis_ltmdd_dis_SRI_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00027474  0.053
+
+#AnyAnx
+adonis_anx_dis_SRI_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00039205  0.005 **
+
+#GAD
+adonis_gad_dis_SRI_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00037506   0.01 **
+
+#LTGAD
+adonis_ltgad_dis_SRI_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00015248  0.618
+
+#NegAff
+adonis_negaff_tran_SRI_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00031606  0.192
+
+#Neuroticism
+adonis_neo_tran_SRI_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00059149  0.115
+
+        #R2 and pvalues of internalizing disorders and traits/states adjusted for PTDs
+#AnyDep
+adonis_dep_dis_med_2$aov.tab
+adonis_dep_dis_med_2$aov.tab[11,]
+#R2 Pr(>F)
+#0.00058486  0.001 ***
+
+#DYS
+adonis_dys_dis_med_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.0004845  0.003 **
+
+#MDD
+adonis_mdd_dis_med_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00031923  0.039 *
+
+#LTMDD
+adonis_ltmdd_dis_med_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00026292   0.06 
+
+#AnyAnx
+adonis_anx_dis_med_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00036775  0.009 **
+
+#GAD
+adonis_gad_dis_med_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00035029  0.015 *
+
+#LTGAD
+adonis_ltgad_dis_med_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00014986  0.633
+
+#NegAff
+adonis_negaff_tran_med_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00032084  0.202
+
+#Neuroticism
+adonis_neo_tran_med_2$aov.tab[11,]
+#R2 Pr(>F) 
+#0.00054423  0.168
