@@ -1,0 +1,98 @@
+###     SCRIPT: UPSET PLOTS OF DISEASE, TREATMENT AND DISEASE BY TREATMENT
+###     AUTHOR(S): SIOBHAN BRUSHETT 
+###     DESCRIPTION: DETERMINING INTERSECTION OF DISEASE, TREATMENT AND DISEASE AND TREATMENT VARIABLES BY GENERATING INTERSECTION PLOTS USING UPSETR
+###     PROJECT: PSYCH-MICROBIOME
+###     NOTE(S): THIS SCRIPT WAS UPDATED TO REPRESENT CONTROLS OF STUDY DESIGN AS OPPOSED TO NON - STRATIFIED CONTROLS
+
+##Contents of this file
+
+## 0. LOAD DATA
+## 1. FORMAT VARIABLES OF INTEREST
+## 2. UPSET PLOT: DISEASE 
+
+library(tidyverse)
+library(UpSetR)
+
+        ## =============== 0. LOAD DATA   ================ ##
+
+phenotypes = read.csv("27.08.2021_transformed_phenotypes_control.csv", header=T, as.is=T, sep=",", row.names = 1)
+dim(phenotypes)
+#7656  236
+
+        ## =============== 1. SUBSET VARIABLES OF INTEREST  ================ ##
+
+#create data subset
+upset_disease <- as.data.frame(phenotypes [, c("MINI.Any_Dep_2a_RECODE", 
+                                               "MINI.DYS_2a_RECODE",
+                                               "MINI.MDD_2a_RECODE", 
+                                               "MINI.Any_Anx_2a_RECODE_1",
+                                               "MINI.GAD_2a_RECODE",
+                                               "MINI.SPH_2a_RECODE",
+                                               "MINI.PD_2a_RECODE",
+                                               "LTMDD_only",
+                                               "LTGAD_only")])
+
+#make variables numeric
+
+        #disease variables (disease coded as 1, controls as 0s)
+upset_disease$MINI.Any_Dep_2a_RECODE <- as.numeric((as.factor(upset_disease$MINI.Any_Dep_2a_RECODE))) 
+table(upset_disease$MINI.Any_Dep_2a_RECODE)
+upset_disease$MINI.Any_Dep_2a_RECODE [upset_disease$MINI.Any_Dep_2a_RECODE == 2] <- 0 
+
+upset_disease$MINI.DYS_2a_RECODE <- as.numeric((as.factor(upset_disease$MINI.DYS_2a_RECODE))) 
+table(upset_disease$MINI.DYS_2a_RECODE)
+upset_disease$MINI.DYS_2a_RECODE [upset_disease$MINI.DYS_2a_RECODE == 2] <- 0 
+
+upset_disease$MINI.MDD_2a_RECODE <- as.numeric((as.factor(upset_disease$MINI.MDD_2a_RECODE))) 
+table(upset_disease$MINI.MDD_2a_RECODE)
+upset_disease$MINI.MDD_2a_RECODE [upset_disease$MINI.MDD_2a_RECODE == 2] <- 0 
+
+upset_disease$MINI.Any_Anx_2a_RECODE_1 <- as.numeric((as.factor(upset_disease$MINI.Any_Anx_2a_RECODE_1))) 
+table(upset_disease$MINI.Any_Anx_2a_RECODE_1)
+upset_disease$MINI.Any_Anx_2a_RECODE_1 [upset_disease$MINI.Any_Anx_2a_RECODE_1 == 2] <- 0 
+
+upset_disease$MINI.GAD_2a_RECODE <- as.numeric((as.factor(upset_disease$MINI.GAD_2a_RECODE))) 
+table(upset_disease$MINI.GAD_2a_RECODE)
+upset_disease$MINI.GAD_2a_RECODE [upset_disease$MINI.GAD_2a_RECODE == 2] <- 0 
+
+upset_disease$MINI.SPH_2a_RECODE <- as.numeric((as.factor(upset_disease$MINI.SPH_2a_RECODE))) 
+table(upset_disease$MINI.SPH_2a_RECODE)
+upset_disease$MINI.SPH_2a_RECODE [upset_disease$MINI.SPH_2a_RECODE == 2] <- 0 
+
+upset_disease$MINI.PD_2a_RECODE <- as.numeric((as.factor(upset_disease$MINI.PD_2a_RECODE))) 
+table(upset_disease$MINI.PD_2a_RECODE)
+upset_disease$MINI.PD_2a_RECODE [upset_disease$MINI.PD_2a_RECODE == 2] <- 0 
+
+upset_disease$LTMDD_only <- as.numeric((as.factor(upset_disease$LTMDD_only))) 
+table(upset_disease$LTMDD_only)
+upset_disease$LTMDD_only [upset_disease$LTMDD_only == 2] <- 0 
+
+upset_disease$LTGAD_only <- as.numeric((as.factor(upset_disease$LTGAD_only))) 
+table(upset_disease$LTGAD_only)
+upset_disease$LTGAD_only [upset_disease$LTGAD_only == 2] <- 0 
+
+#rename column names
+upset_disease <-  upset_disease %>% 
+        rename ("AnyDep" = "MINI.Any_Dep_2a_RECODE",
+                "DYS" = "MINI.DYS_2a_RECODE",
+                "MDD" = "MINI.MDD_2a_RECODE",
+                "AnyAnx" = "MINI.Any_Anx_2a_RECODE_1",
+                "GAD" = "MINI.GAD_2a_RECODE",
+                "SPH" = "MINI.SPH_2a_RECODE",
+                "PD" = "MINI.PD_2a_RECODE",
+                "LT-MDD" = "LTMDD_only",
+                "LT-GAD" = "LTGAD_only")
+
+
+        ## =============== 2. UPSET PLOT: DISEASE  ================ ##
+
+#recode na's to 0 to avoid exclusion of participants by UpSetR function
+#NOTE: while not representative of the data, this answers the question of wanting to see the overlap between participants with disease or treatment == 1
+
+upset_disease[is.na(upset_disease)] <- 0
+
+        #plot
+pdf(file = "2022_06_28_disease_upset_plot.pdf", width = 12, useDingbats = F)
+UpSet_disease <- UpSetR::upset(upset_disease, nsets=12, text.scale=1, order.by="freq") 
+UpSet_disease
+dev.off()
