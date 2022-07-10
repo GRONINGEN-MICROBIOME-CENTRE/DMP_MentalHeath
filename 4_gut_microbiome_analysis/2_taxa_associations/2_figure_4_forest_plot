@@ -1,0 +1,1391 @@
+#TAXA EFFECT SIZE PLOTS OF FDR SIGNIFICANT SPECIES ASSOCIATIONS
+
+#libraries
+library(tidyverse)
+
+#sources: https://datascienceplus.com/lattice-like-forest-plot-using-ggplot2-in-r/ 
+#        https://ggplot2-book.org/facet.html #facets
+
+#prepare individual dataframes before merging
+
+
+#read in taxa association output for adjusted models
+ssri <- read.delim("taxa_asscns_study_wide_SRI_adjusted.txt",
+                   stringsAsFactors = T)
+str(ssri)
+
+ptdadj <- read.delim("taxa_asscns_study_wide_PTD_adjusted.txt",
+                     stringsAsFactors = T)
+str(ptdadj)
+
+        #1. Figure 4 | AnyDep
+#1.1 AnyDep adj for SSRIs
+AnyDepssri <- ssri %>%
+        filter(factor == "AnyDep_control")
+str(AnyDepssri)
+#373 13
+
+AnyDepssri_taxa <- AnyDepssri[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+AnyDepssri_taxa$AnyDep_SSRI_lower_limit <- AnyDepssri_taxa$factor_coefficient - 1.96 * AnyDepssri_taxa$factor_SE
+AnyDepssri_taxa$AnyDep_SSRI_upper_limit <- AnyDepssri_taxa$factor_coefficient + 1.96 * AnyDepssri_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+AnyDepssri_taxa$factor <- as.character(AnyDepssri_taxa$factor)
+AnyDepssri_taxa$factor[AnyDepssri_taxa$factor=="AnyDep_control"] <- "disorder_SSRI"
+AnyDepssri_taxa <- rename (AnyDepssri_taxa,
+                           c (AnyDep_SSRI = factor,
+                              AnyDep_SSRI_beta = factor_coefficient,
+                              AnyDep_SSRI_SE = factor_SE,
+                              AnyDep_SSRI_FDR = factor_FDR))
+str(AnyDepssri_taxa)
+#373 7
+head(AnyDepssri_taxa)
+
+#1.2 SSRIs adj for AnyDep
+SSRIanydep <- ssri %>%
+        filter(factor == "AnyDep_control" & drug == "SSRI")
+str(SSRIanydep)
+#373 13
+
+SSRIanydep_taxa <- SSRIanydep[, c("taxa", "drug", "SSRI_coefficient", "SSRI_SE", "SSRI_FDR")]
+#373 5
+SSRIanydep_taxa$SSRI_AnyDep_lower_limit <- SSRIanydep_taxa$SSRI_coefficient - 1.96 * SSRIanydep_taxa$SSRI_SE
+SSRIanydep_taxa$SSRI_AnyDep_upper_limit <- SSRIanydep_taxa$SSRI_coefficient + 1.96 * SSRIanydep_taxa$SSRI_SE
+#373 7
+
+#rename variables and columns before merge
+SSRIanydep_taxa$drug <- as.character(SSRIanydep_taxa$drug)
+SSRIanydep_taxa$drug[SSRIanydep_taxa$drug=="SSRI"] <- "SSRI_disorder"
+SSRIanydep_taxa <- rename (SSRIanydep_taxa,
+                           c (SSRI_AnyDep = drug,
+                              SSRI_AnyDep_beta = SSRI_coefficient,
+                              SSRI_AnyDep_SE = SSRI_SE,
+                              SSRI_AnyDep_FDR = SSRI_FDR))
+str(SSRIanydep_taxa)
+head(SSRIanydep_taxa)
+
+#1.3 AnyDep adj for PTDs
+AnyDepptd <- ptdadj %>%
+        filter(factor == "AnyDep_control")
+str(AnyDepptd)
+#373 13
+
+AnyDepptd_taxa <- AnyDepptd[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+AnyDepptd_taxa$AnyDep_PTD_lower_limit <- AnyDepptd_taxa$factor_coefficient - 1.96 * AnyDepptd_taxa$factor_SE
+AnyDepptd_taxa$AnyDep_PTD_upper_limit <- AnyDepptd_taxa$factor_coefficient + 1.96 * AnyDepptd_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+AnyDepptd_taxa$factor <- as.character(AnyDepptd_taxa$factor)
+AnyDepptd_taxa$factor[AnyDepptd_taxa$factor=="AnyDep_control"] <- "disorder_PTD"
+AnyDepptd_taxa <- rename (AnyDepptd_taxa,
+                          c (AnyDep_PTD = factor,
+                             AnyDep_PTD_beta = factor_coefficient,
+                             AnyDep_PTD_SE = factor_SE,
+                             AnyDep_PTD_FDR = factor_FDR))
+
+str(AnyDepptd_taxa)
+head(AnyDepptd_taxa)
+
+#1.4 PTDs adj for AnyDep
+PTDanydep <- ptdadj %>%
+        filter(factor == "AnyDep_control" & drug == "PTD")
+str(PTDanydep)
+#373 13
+
+PTDanydep_taxa <- PTDanydep[, c("taxa", "drug", "PTD_coefficient", "PTD_SE", "PTD_FDR")]
+
+PTDanydep_taxa$PTD_AnyDep_lower_limit <- PTDanydep_taxa$PTD_coefficient - 1.96 * PTDanydep_taxa$PTD_SE
+PTDanydep_taxa$PTD_AnyDep_upper_limit <- PTDanydep_taxa$PTD_coefficient + 1.96 * PTDanydep_taxa$PTD_SE
+
+#rename variables and columns before merge
+PTDanydep_taxa$drug <- as.character(PTDanydep_taxa$drug)
+PTDanydep_taxa$drug[PTDanydep_taxa$drug=="PTD"] <- "PTD_disorder"
+PTDanydep_taxa <- rename (PTDanydep_taxa,
+                          c (PTD_AnyDep = drug,
+                             PTD_AnyDep_beta = PTD_coefficient,
+                             PTD_AnyDep_SE = PTD_SE,
+                             PTD_AnyDep_FDR = PTD_FDR))
+str(PTDanydep_taxa)
+head(PTDanydep_taxa)
+
+#merge by taxa
+anydepression_taxa <- list(AnyDepssri_taxa, SSRIanydep_taxa, AnyDepptd_taxa, PTDanydep_taxa)
+anydepression_taxa <- anydepression_taxa %>% reduce(full_join, by= "taxa")
+str(anydepression_taxa)
+#373  25
+
+#condition 1 on FDR<0.05 (OR statements)
+anydepression_group <- anydepression_taxa %>%
+        filter(AnyDep_SSRI_FDR <0.05 |
+                       SSRI_AnyDep_FDR <0.05 |
+                       AnyDep_PTD_FDR <0.05 |
+                       PTD_AnyDep_FDR <0.05)
+dim(anydepression_group)
+#33 25
+
+#condition 2 on species level taxa only
+#remove characters until the last order/level of taxa
+anydepression_group$taxa <- sub(".+[|]", "",anydepression_group$taxa)
+#keep only spp level taxa
+anydepression_group <- anydepression_group[grepl("^s",anydepression_group$taxa),]
+dim(anydepression_group)
+#14 25
+
+anydepression_group$taxa
+#remove phage (s__Lactococcus_phage_jm3; the last entry - row 14) as this is not well defined by metaphlan
+
+anydepression_group <- anydepression_group[c(1:13),]
+
+#rename species to include disorder 
+anydepression_group$taxa <- sub("^","1_AnyDep_",anydepression_group$taxa)
+
+#redefine datasets now that subsets have been made with overlapping taxa
+anydepression_group$taxa
+
+#1.1 AnyDep adj for SSRIs
+AnyDepssri_taxa_2 <- anydepression_group [, c("taxa", "AnyDep_SSRI_beta", "AnyDep_SSRI_lower_limit", "AnyDep_SSRI_upper_limit", "AnyDep_SSRI")]
+str(AnyDepssri_taxa_2)
+#13 5
+
+AnyDepssri_taxa_2 <- rename (AnyDepssri_taxa_2, c(Beta = AnyDep_SSRI_beta,
+                                                  Lower_limit = AnyDep_SSRI_lower_limit,
+                                                  Upper_limit = AnyDep_SSRI_upper_limit,
+                                                  Factor = AnyDep_SSRI))
+
+#1.2 SSRIs adj for AnyDep
+SSRIanydep_taxa_2 <- anydepression_group [, c("taxa", "SSRI_AnyDep_beta", "SSRI_AnyDep_lower_limit", "SSRI_AnyDep_upper_limit", "SSRI_AnyDep")]
+str(SSRIanydep_taxa_2)
+#13 5
+
+SSRIanydep_taxa_2 <- rename (SSRIanydep_taxa_2, c(Beta = SSRI_AnyDep_beta,
+                                                  Lower_limit = SSRI_AnyDep_lower_limit,
+                                                  Upper_limit = SSRI_AnyDep_upper_limit,
+                                                  Factor = SSRI_AnyDep))
+
+#1.3 AnyDep adj for PTDs
+AnyDepptd_taxa_2 <- anydepression_group [, c("taxa", "AnyDep_PTD_beta", "AnyDep_PTD_lower_limit", "AnyDep_PTD_upper_limit", "AnyDep_PTD")]
+str(AnyDepptd_taxa_2)
+#13 5
+
+AnyDepptd_taxa_2 <- rename (AnyDepptd_taxa_2, c(Beta = AnyDep_PTD_beta,
+                                                Lower_limit = AnyDep_PTD_lower_limit,
+                                                Upper_limit = AnyDep_PTD_upper_limit,
+                                                Factor = AnyDep_PTD))
+
+#1.4 PTDs adj for AnyDep
+PTDanydep_taxa_2 <- anydepression_group [, c("taxa", "PTD_AnyDep_beta", "PTD_AnyDep_lower_limit", "PTD_AnyDep_upper_limit", "PTD_AnyDep")]
+str(PTDanydep_taxa_2)
+#13 5
+
+PTDanydep_taxa_2 <- rename (PTDanydep_taxa_2, c(Beta = PTD_AnyDep_beta,
+                                                Lower_limit = PTD_AnyDep_lower_limit,
+                                                Upper_limit = PTD_AnyDep_upper_limit,
+                                                Factor = PTD_AnyDep))
+
+        #2. Figure 4 | DYS
+#2.1 DYS adj for SSRIs
+DYSssri <- ssri %>%
+        filter(factor == "DYS_control")
+str(DYSssri)
+#373 13
+
+DYSssri_taxa <- DYSssri[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+DYSssri_taxa$DYS_SSRI_lower_limit <- DYSssri_taxa$factor_coefficient - 1.96 * DYSssri_taxa$factor_SE
+DYSssri_taxa$DYS_SSRI_upper_limit <- DYSssri_taxa$factor_coefficient + 1.96 * DYSssri_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+DYSssri_taxa$factor <- as.character(DYSssri_taxa$factor)
+DYSssri_taxa$factor[DYSssri_taxa$factor=="DYS_control"] <- "disorder_SSRI"
+DYSssri_taxa <- rename (DYSssri_taxa,
+                        c (DYS_SSRI = factor,
+                           DYS_SSRI_beta = factor_coefficient,
+                           DYS_SSRI_SE = factor_SE,
+                           DYS_SSRI_FDR = factor_FDR))
+str(DYSssri_taxa)
+#373 7
+head(DYSssri_taxa)
+
+#2.2 SSRIs adj for DYS
+SSRIdys <- ssri %>%
+        filter(factor == "DYS_control" & drug == "SSRI")
+str(SSRIdys)
+#373 13
+
+SSRIdys_taxa <- SSRIdys[, c("taxa", "drug", "SSRI_coefficient", "SSRI_SE", "SSRI_FDR")]
+#373 5
+SSRIdys_taxa$SSRI_DYS_lower_limit <- SSRIdys_taxa$SSRI_coefficient - 1.96 * SSRIdys_taxa$SSRI_SE
+SSRIdys_taxa$SSRI_DYS_upper_limit <- SSRIdys_taxa$SSRI_coefficient + 1.96 * SSRIdys_taxa$SSRI_SE
+#373 7
+
+#rename variables and columns before merge
+SSRIdys_taxa$drug <- as.character(SSRIdys_taxa$drug)
+SSRIdys_taxa$drug[SSRIdys_taxa$drug=="SSRI"] <- "SSRI_disorder"
+SSRIdys_taxa <- rename (SSRIdys_taxa,
+                        c (SSRI_DYS = drug,
+                           SSRI_DYS_beta = SSRI_coefficient,
+                           SSRI_DYS_SE = SSRI_SE,
+                           SSRI_DYS_FDR = SSRI_FDR))
+str(SSRIdys_taxa)
+head(SSRIdys_taxa)
+
+#2.3 DYS adj for PTDs
+DYSptd <- ptdadj %>%
+        filter(factor == "DYS_control")
+str(DYSptd)
+#373 13
+
+DYSptd_taxa <- DYSptd[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+DYSptd_taxa$DYS_PTD_lower_limit <- DYSptd_taxa$factor_coefficient - 1.96 * DYSptd_taxa$factor_SE
+DYSptd_taxa$DYS_PTD_upper_limit <- DYSptd_taxa$factor_coefficient + 1.96 * DYSptd_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+DYSptd_taxa$factor <- as.character(DYSptd_taxa$factor)
+DYSptd_taxa$factor[DYSptd_taxa$factor=="DYS_control"] <- "disorder_PTD"
+DYSptd_taxa <- rename (DYSptd_taxa,
+                       c (DYS_PTD = factor,
+                          DYS_PTD_beta = factor_coefficient,
+                          DYS_PTD_SE = factor_SE,
+                          DYS_PTD_FDR = factor_FDR))
+
+str(DYSptd_taxa)
+head(DYSptd_taxa)
+
+#2.4 PTDs adj for DYS
+PTDdys <- ptdadj %>%
+        filter(factor == "DYS_control" & drug == "PTD")
+str(PTDdys)
+#373 13
+
+PTDdys_taxa <- PTDdys[, c("taxa", "drug", "PTD_coefficient", "PTD_SE", "PTD_FDR")]
+
+PTDdys_taxa$PTD_DYS_lower_limit <- PTDdys_taxa$PTD_coefficient - 1.96 * PTDdys_taxa$PTD_SE
+PTDdys_taxa$PTD_DYS_upper_limit <- PTDdys_taxa$PTD_coefficient + 1.96 * PTDdys_taxa$PTD_SE
+
+#rename variables and columns before merge
+PTDdys_taxa$drug <- as.character(PTDdys_taxa$drug)
+PTDdys_taxa$drug[PTDdys_taxa$drug=="PTD"] <- "PTD_disorder"
+PTDdys_taxa <- rename (PTDdys_taxa,
+                       c (PTD_DYS = drug,
+                          PTD_DYS_beta = PTD_coefficient,
+                          PTD_DYS_SE = PTD_SE,
+                          PTD_DYS_FDR = PTD_FDR))
+str(PTDdys_taxa)
+head(PTDdys_taxa)
+
+#merge by taxa
+dys_taxa <- list(DYSssri_taxa, SSRIdys_taxa, DYSptd_taxa, PTDdys_taxa)
+dys_taxa <- dys_taxa %>% reduce(full_join, by= "taxa")
+str(dys_taxa)
+#373  25
+
+#condition 1 on FDR<0.05 (OR statements)
+dys_group <- dys_taxa %>%
+        filter(DYS_SSRI_FDR <0.05 |
+                       SSRI_DYS_FDR <0.05 |
+                       DYS_PTD_FDR <0.05 |
+                       PTD_DYS_FDR <0.05)
+dim(dys_group)
+#18 25
+
+#condition 2 on species level taxa only
+#remove characters until the last order/level of taxa
+dys_group$taxa <- sub(".+[|]", "",dys_group$taxa)
+#keep only spp level taxa
+dys_group <- dys_group[grepl("^s",dys_group$taxa),]
+dim(dys_group)
+#8 25
+
+dys_group$taxa
+
+#rename species to include disorder 
+dys_group$taxa <- sub("^","2_DYS_",dys_group$taxa)
+
+dys_group$taxa
+
+#redefine datasets now that subsets have been made with overlapping taxa
+
+#2.1 DYS adj for SSRIs
+DYSssri_taxa_2 <- dys_group [, c("taxa", "DYS_SSRI_beta", "DYS_SSRI_lower_limit", "DYS_SSRI_upper_limit", "DYS_SSRI")]
+str(DYSssri_taxa_2)
+#8 5
+
+DYSssri_taxa_2 <- rename (DYSssri_taxa_2, c(Beta = DYS_SSRI_beta,
+                                            Lower_limit = DYS_SSRI_lower_limit,
+                                            Upper_limit = DYS_SSRI_upper_limit,
+                                            Factor = DYS_SSRI))
+
+#2.2 SSRIs adj for DYS
+SSRIdys_taxa_2 <- dys_group [, c("taxa", "SSRI_DYS_beta", "SSRI_DYS_lower_limit", "SSRI_DYS_upper_limit", "SSRI_DYS")]
+str(SSRIdys_taxa_2)
+#8 5
+
+SSRIdys_taxa_2 <- rename (SSRIdys_taxa_2, c(Beta = SSRI_DYS_beta,
+                                            Lower_limit = SSRI_DYS_lower_limit,
+                                            Upper_limit = SSRI_DYS_upper_limit,
+                                            Factor = SSRI_DYS))
+
+#2.3 DYS adj for PTDs
+DYSptd_taxa_2 <- dys_group [, c("taxa", "DYS_PTD_beta", "DYS_PTD_lower_limit", "DYS_PTD_upper_limit", "DYS_PTD")]
+str(DYSptd_taxa_2)
+#8 5
+
+DYSptd_taxa_2 <- rename (DYSptd_taxa_2, c(Beta = DYS_PTD_beta,
+                                          Lower_limit = DYS_PTD_lower_limit,
+                                          Upper_limit = DYS_PTD_upper_limit,
+                                          Factor = DYS_PTD))
+
+#2.4 PTDs adj for DYS
+PTDdys_taxa_2 <- dys_group [, c("taxa", "PTD_DYS_beta", "PTD_DYS_lower_limit", "PTD_DYS_upper_limit", "PTD_DYS")]
+str(PTDdys_taxa_2)
+#8 5
+
+PTDdys_taxa_2 <- rename (PTDdys_taxa_2, c(Beta = PTD_DYS_beta,
+                                          Lower_limit = PTD_DYS_lower_limit,
+                                          Upper_limit = PTD_DYS_upper_limit,
+                                          Factor = PTD_DYS))
+
+        #3. Figure 4 | MDD
+#3.1 MDD adj for SSRIs
+MDDssri <- ssri %>%
+        filter(factor == "MDD_control")
+str(MDDssri)
+#373 13
+
+MDDssri_taxa <- MDDssri[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+MDDssri_taxa$MDD_SSRI_lower_limit <- MDDssri_taxa$factor_coefficient - 1.96 * MDDssri_taxa$factor_SE
+MDDssri_taxa$MDD_SSRI_upper_limit <- MDDssri_taxa$factor_coefficient + 1.96 * MDDssri_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+MDDssri_taxa$factor <- as.character(MDDssri_taxa$factor)
+MDDssri_taxa$factor[MDDssri_taxa$factor=="MDD_control"] <- "disorder_SSRI"
+MDDssri_taxa <- rename (MDDssri_taxa,
+                        c (MDD_SSRI = factor,
+                           MDD_SSRI_beta = factor_coefficient,
+                           MDD_SSRI_SE = factor_SE,
+                           MDD_SSRI_FDR = factor_FDR))
+str(MDDssri_taxa)
+#373 7
+head(MDDssri_taxa)
+
+#3.2 SSRIs adj for MDD
+SSRIMDD <- ssri %>%
+        filter(factor == "MDD_control" & drug == "SSRI")
+str(SSRIMDD)
+#373 13
+
+SSRIMDD_taxa <- SSRIMDD[, c("taxa", "drug", "SSRI_coefficient", "SSRI_SE", "SSRI_FDR")]
+#373 5
+SSRIMDD_taxa$SSRI_MDD_lower_limit <- SSRIMDD_taxa$SSRI_coefficient - 1.96 * SSRIMDD_taxa$SSRI_SE
+SSRIMDD_taxa$SSRI_MDD_upper_limit <- SSRIMDD_taxa$SSRI_coefficient + 1.96 * SSRIMDD_taxa$SSRI_SE
+#373 7
+
+#rename variables and columns before merge
+SSRIMDD_taxa$drug <- as.character(SSRIMDD_taxa$drug)
+SSRIMDD_taxa$drug[SSRIMDD_taxa$drug=="SSRI"] <- "SSRI_disorder"
+SSRIMDD_taxa <- rename (SSRIMDD_taxa,
+                        c (SSRI_MDD = drug,
+                           SSRI_MDD_beta = SSRI_coefficient,
+                           SSRI_MDD_SE = SSRI_SE,
+                           SSRI_MDD_FDR = SSRI_FDR))
+str(SSRIMDD_taxa)
+head(SSRIMDD_taxa)
+
+#3.3 MDD adj for PTDs
+MDDptd <- ptdadj %>%
+        filter(factor == "MDD_control")
+str(MDDptd)
+#373 13
+
+MDDptd_taxa <- MDDptd[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+MDDptd_taxa$MDD_PTD_lower_limit <- MDDptd_taxa$factor_coefficient - 1.96 * MDDptd_taxa$factor_SE
+MDDptd_taxa$MDD_PTD_upper_limit <- MDDptd_taxa$factor_coefficient + 1.96 * MDDptd_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+MDDptd_taxa$factor <- as.character(MDDptd_taxa$factor)
+MDDptd_taxa$factor[MDDptd_taxa$factor=="MDD_control"] <- "disorder_PTD"
+MDDptd_taxa <- rename (MDDptd_taxa,
+                       c (MDD_PTD = factor,
+                          MDD_PTD_beta = factor_coefficient,
+                          MDD_PTD_SE = factor_SE,
+                          MDD_PTD_FDR = factor_FDR))
+
+str(MDDptd_taxa)
+head(MDDptd_taxa)
+
+#3.4 PTDs adj for MDD
+PTDMDD <- ptdadj %>%
+        filter(factor == "MDD_control" & drug == "PTD")
+str(PTDMDD)
+#373 13
+
+PTDMDD_taxa <- PTDMDD[, c("taxa", "drug", "PTD_coefficient", "PTD_SE", "PTD_FDR")]
+
+PTDMDD_taxa$PTD_MDD_lower_limit <- PTDMDD_taxa$PTD_coefficient - 1.96 * PTDMDD_taxa$PTD_SE
+PTDMDD_taxa$PTD_MDD_upper_limit <- PTDMDD_taxa$PTD_coefficient + 1.96 * PTDMDD_taxa$PTD_SE
+
+#rename variables and columns before merge
+PTDMDD_taxa$drug <- as.character(PTDMDD_taxa$drug)
+PTDMDD_taxa$drug[PTDMDD_taxa$drug=="PTD"] <- "PTD_disorder"
+PTDMDD_taxa <- rename (PTDMDD_taxa,
+                       c (PTD_MDD = drug,
+                          PTD_MDD_beta = PTD_coefficient,
+                          PTD_MDD_SE = PTD_SE,
+                          PTD_MDD_FDR = PTD_FDR))
+str(PTDMDD_taxa)
+head(PTDMDD_taxa)
+
+#merge by taxa
+MDD_taxa <- list(MDDssri_taxa, SSRIMDD_taxa, MDDptd_taxa, PTDMDD_taxa)
+MDD_taxa <- MDD_taxa %>% reduce(full_join, by= "taxa")
+str(MDD_taxa)
+#373  25
+
+#condition 1 on FDR<0.05 (OR statements)
+MDD_group <- MDD_taxa %>%
+        filter(MDD_SSRI_FDR <0.05 |
+                       SSRI_MDD_FDR <0.05 |
+                       MDD_PTD_FDR <0.05 |
+                       PTD_MDD_FDR <0.05)
+dim(MDD_group)
+#11 25
+
+#condition 2 on species level taxa only
+#remove characters until the last order/level of taxa
+MDD_group$taxa <- sub(".+[|]", "",MDD_group$taxa)
+#keep only spp level taxa
+MDD_group <- MDD_group[grepl("^s",MDD_group$taxa),]
+dim(MDD_group)
+#4 25
+
+MDD_group$taxa
+
+#rename species to include disorder 
+MDD_group$taxa <- sub("^","3_MDD_",MDD_group$taxa)
+
+MDD_group$taxa
+
+#redefine datasets now that subsets have been made with overlapping taxa
+
+#3.1 MDD adj for SSRIs
+MDDssri_taxa_2 <- MDD_group [, c("taxa", "MDD_SSRI_beta", "MDD_SSRI_lower_limit", "MDD_SSRI_upper_limit", "MDD_SSRI")]
+str(MDDssri_taxa_2)
+#4 5
+
+MDDssri_taxa_2 <- rename (MDDssri_taxa_2, c(Beta = MDD_SSRI_beta,
+                                            Lower_limit = MDD_SSRI_lower_limit,
+                                            Upper_limit = MDD_SSRI_upper_limit,
+                                            Factor = MDD_SSRI))
+
+#3.2 SSRIs adj for MDD
+SSRIMDD_taxa_2 <- MDD_group [, c("taxa", "SSRI_MDD_beta", "SSRI_MDD_lower_limit", "SSRI_MDD_upper_limit", "SSRI_MDD")]
+str(SSRIMDD_taxa_2)
+#4 5
+
+SSRIMDD_taxa_2 <- rename (SSRIMDD_taxa_2, c(Beta = SSRI_MDD_beta,
+                                            Lower_limit = SSRI_MDD_lower_limit,
+                                            Upper_limit = SSRI_MDD_upper_limit,
+                                            Factor = SSRI_MDD))
+
+#3.3 MDD adj for PTDs
+MDDptd_taxa_2 <- MDD_group [, c("taxa", "MDD_PTD_beta", "MDD_PTD_lower_limit", "MDD_PTD_upper_limit", "MDD_PTD")]
+str(MDDptd_taxa_2)
+#4 5
+
+MDDptd_taxa_2 <- rename (MDDptd_taxa_2, c(Beta = MDD_PTD_beta,
+                                          Lower_limit = MDD_PTD_lower_limit,
+                                          Upper_limit = MDD_PTD_upper_limit,
+                                          Factor = MDD_PTD))
+
+#3.4 PTDs adj for MDD
+PTDMDD_taxa_2 <- MDD_group [, c("taxa", "PTD_MDD_beta", "PTD_MDD_lower_limit", "PTD_MDD_upper_limit", "PTD_MDD")]
+str(PTDMDD_taxa_2)
+#4 5
+
+PTDMDD_taxa_2 <- rename (PTDMDD_taxa_2, c(Beta = PTD_MDD_beta,
+                                          Lower_limit = PTD_MDD_lower_limit,
+                                          Upper_limit = PTD_MDD_upper_limit,
+                                          Factor = PTD_MDD))
+
+        #4. Figure 4 | LTMDD
+#4.1 LTMDD adj for SSRIs
+LTMDDssri <- ssri %>%
+        filter(factor == "LTMDDonly_control")
+str(LTMDDssri)
+#373 13
+
+LTMDDssri_taxa <- LTMDDssri[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+LTMDDssri_taxa$LTMDD_SSRI_lower_limit <- LTMDDssri_taxa$factor_coefficient - 1.96 * LTMDDssri_taxa$factor_SE
+LTMDDssri_taxa$LTMDD_SSRI_upper_limit <- LTMDDssri_taxa$factor_coefficient + 1.96 * LTMDDssri_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+LTMDDssri_taxa$factor <- as.character(LTMDDssri_taxa$factor)
+LTMDDssri_taxa$factor[LTMDDssri_taxa$factor=="LTMDDonly_control"] <- "disorder_SSRI"
+LTMDDssri_taxa <- rename (LTMDDssri_taxa,
+                          c (LTMDD_SSRI = factor,
+                             LTMDD_SSRI_beta = factor_coefficient,
+                             LTMDD_SSRI_SE = factor_SE,
+                             LTMDD_SSRI_FDR = factor_FDR))
+str(LTMDDssri_taxa)
+#373 7
+head(LTMDDssri_taxa)
+
+#4.2 SSRIs adj for LTMDD
+SSRILTMDD <- ssri %>%
+        filter(factor == "LTMDDonly_control" & drug == "SSRI")
+str(SSRILTMDD)
+#373 13
+
+SSRILTMDD_taxa <- SSRILTMDD[, c("taxa", "drug", "SSRI_coefficient", "SSRI_SE", "SSRI_FDR")]
+#373 5
+SSRILTMDD_taxa$SSRI_LTMDD_lower_limit <- SSRILTMDD_taxa$SSRI_coefficient - 1.96 * SSRILTMDD_taxa$SSRI_SE
+SSRILTMDD_taxa$SSRI_LTMDD_upper_limit <- SSRILTMDD_taxa$SSRI_coefficient + 1.96 * SSRILTMDD_taxa$SSRI_SE
+#373 7
+
+#rename variables and columns before merge
+SSRILTMDD_taxa$drug <- as.character(SSRILTMDD_taxa$drug)
+SSRILTMDD_taxa$drug[SSRILTMDD_taxa$drug=="SSRI"] <- "SSRI_disorder"
+SSRILTMDD_taxa <- rename (SSRILTMDD_taxa,
+                          c (SSRI_LTMDD = drug,
+                             SSRI_LTMDD_beta = SSRI_coefficient,
+                             SSRI_LTMDD_SE = SSRI_SE,
+                             SSRI_LTMDD_FDR = SSRI_FDR))
+str(SSRILTMDD_taxa)
+head(SSRILTMDD_taxa)
+
+#4.3 LTMDD adj for PTDs
+LTMDDptd <- ptdadj %>%
+        filter(factor == "LTMDDonly_control")
+str(LTMDDptd)
+#373 13
+
+LTMDDptd_taxa <- LTMDDptd[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+LTMDDptd_taxa$LTMDD_PTD_lower_limit <- LTMDDptd_taxa$factor_coefficient - 1.96 * LTMDDptd_taxa$factor_SE
+LTMDDptd_taxa$LTMDD_PTD_upper_limit <- LTMDDptd_taxa$factor_coefficient + 1.96 * LTMDDptd_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+LTMDDptd_taxa$factor <- as.character(LTMDDptd_taxa$factor)
+LTMDDptd_taxa$factor[LTMDDptd_taxa$factor=="LTMDDonly_control"] <- "disorder_PTD"
+LTMDDptd_taxa <- rename (LTMDDptd_taxa,
+                         c (LTMDD_PTD = factor,
+                            LTMDD_PTD_beta = factor_coefficient,
+                            LTMDD_PTD_SE = factor_SE,
+                            LTMDD_PTD_FDR = factor_FDR))
+
+str(LTMDDptd_taxa)
+head(LTMDDptd_taxa)
+
+#4.4 PTDs adj for LTMDD
+PTDLTMDD <- ptdadj %>%
+        filter(factor == "LTMDDonly_control" & drug == "PTD")
+str(PTDLTMDD)
+#373 13
+
+PTDLTMDD_taxa <- PTDLTMDD[, c("taxa", "drug", "PTD_coefficient", "PTD_SE", "PTD_FDR")]
+
+PTDLTMDD_taxa$PTD_LTMDD_lower_limit <- PTDLTMDD_taxa$PTD_coefficient - 1.96 * PTDLTMDD_taxa$PTD_SE
+PTDLTMDD_taxa$PTD_LTMDD_upper_limit <- PTDLTMDD_taxa$PTD_coefficient + 1.96 * PTDLTMDD_taxa$PTD_SE
+
+#rename variables and columns before merge
+PTDLTMDD_taxa$drug <- as.character(PTDLTMDD_taxa$drug)
+PTDLTMDD_taxa$drug[PTDLTMDD_taxa$drug=="PTD"] <- "PTD_disorder"
+PTDLTMDD_taxa <- rename (PTDLTMDD_taxa,
+                         c (PTD_LTMDD = drug,
+                            PTD_LTMDD_beta = PTD_coefficient,
+                            PTD_LTMDD_SE = PTD_SE,
+                            PTD_LTMDD_FDR = PTD_FDR))
+str(PTDLTMDD_taxa)
+head(PTDLTMDD_taxa)
+
+#merge by taxa
+LTMDD_taxa <- list(LTMDDssri_taxa, SSRILTMDD_taxa, LTMDDptd_taxa, PTDLTMDD_taxa)
+LTMDD_taxa <- LTMDD_taxa %>% reduce(full_join, by= "taxa")
+str(LTMDD_taxa)
+#373  25
+
+#condition 1 on FDR<0.05 (OR statements)
+LTMDD_group <- LTMDD_taxa %>%
+        filter(LTMDD_SSRI_FDR <0.05 |
+                       SSRI_LTMDD_FDR <0.05 |
+                       LTMDD_PTD_FDR <0.05 |
+                       PTD_LTMDD_FDR <0.05)
+dim(LTMDD_group)
+#8 25
+
+#condition 2 on species level taxa only
+#remove characters until the last order/level of taxa
+LTMDD_group$taxa <- sub(".+[|]", "",LTMDD_group$taxa)
+#keep only spp level taxa
+LTMDD_group <- LTMDD_group[grepl("^s",LTMDD_group$taxa),]
+dim(LTMDD_group)
+#5 25
+
+LTMDD_group$taxa
+
+#rename species to include disorder 
+LTMDD_group$taxa <- sub("^","4_LT-MDD_",LTMDD_group$taxa)
+
+LTMDD_group$taxa
+
+#redefine datasets now that subsets have been made with overlapping taxa
+
+#4.1 LTMDD adj for SSRIs
+LTMDDssri_taxa_2 <- LTMDD_group [, c("taxa", "LTMDD_SSRI_beta", "LTMDD_SSRI_lower_limit", "LTMDD_SSRI_upper_limit", "LTMDD_SSRI")]
+str(LTMDDssri_taxa_2)
+#5 5
+
+LTMDDssri_taxa_2 <- rename (LTMDDssri_taxa_2, c(Beta = LTMDD_SSRI_beta,
+                                                Lower_limit = LTMDD_SSRI_lower_limit,
+                                                Upper_limit = LTMDD_SSRI_upper_limit,
+                                                Factor = LTMDD_SSRI))
+
+#4.2 SSRIs adj for LTMDD
+SSRILTMDD_taxa_2 <- LTMDD_group [, c("taxa", "SSRI_LTMDD_beta", "SSRI_LTMDD_lower_limit", "SSRI_LTMDD_upper_limit", "SSRI_LTMDD")]
+str(SSRILTMDD_taxa_2)
+#5 5
+
+SSRILTMDD_taxa_2 <- rename (SSRILTMDD_taxa_2, c(Beta = SSRI_LTMDD_beta,
+                                                Lower_limit = SSRI_LTMDD_lower_limit,
+                                                Upper_limit = SSRI_LTMDD_upper_limit,
+                                                Factor = SSRI_LTMDD))
+
+#4.3 LTMDD adj for PTDs
+LTMDDptd_taxa_2 <- LTMDD_group [, c("taxa", "LTMDD_PTD_beta", "LTMDD_PTD_lower_limit", "LTMDD_PTD_upper_limit", "LTMDD_PTD")]
+str(LTMDDptd_taxa_2)
+#5 5
+
+LTMDDptd_taxa_2 <- rename (LTMDDptd_taxa_2, c(Beta = LTMDD_PTD_beta,
+                                              Lower_limit = LTMDD_PTD_lower_limit,
+                                              Upper_limit = LTMDD_PTD_upper_limit,
+                                              Factor = LTMDD_PTD))
+
+#4.4 PTDs adj for LTMDD
+PTDLTMDD_taxa_2 <- LTMDD_group [, c("taxa", "PTD_LTMDD_beta", "PTD_LTMDD_lower_limit", "PTD_LTMDD_upper_limit", "PTD_LTMDD")]
+str(PTDLTMDD_taxa_2)
+#5 5
+
+PTDLTMDD_taxa_2 <- rename (PTDLTMDD_taxa_2, c(Beta = PTD_LTMDD_beta,
+                                              Lower_limit = PTD_LTMDD_lower_limit,
+                                              Upper_limit = PTD_LTMDD_upper_limit,
+                                              Factor = PTD_LTMDD))
+
+        #5. Figure 4 | AnyAnx
+#5.1 AnyAnx adj for SSRIs
+AnyAnxssri <- ssri %>%
+        filter(factor == "AnyAnx_control")
+str(AnyAnxssri)
+#373 13
+
+AnyAnxssri_taxa <- AnyAnxssri[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+AnyAnxssri_taxa$AnyAnx_SSRI_lower_limit <- AnyAnxssri_taxa$factor_coefficient - 1.96 * AnyAnxssri_taxa$factor_SE
+AnyAnxssri_taxa$AnyAnx_SSRI_upper_limit <- AnyAnxssri_taxa$factor_coefficient + 1.96 * AnyAnxssri_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+AnyAnxssri_taxa$factor <- as.character(AnyAnxssri_taxa$factor)
+AnyAnxssri_taxa$factor[AnyAnxssri_taxa$factor=="AnyAnx_control"] <- "disorder_SSRI"
+AnyAnxssri_taxa <- rename (AnyAnxssri_taxa,
+                           c (AnyAnx_SSRI = factor,
+                              AnyAnx_SSRI_beta = factor_coefficient,
+                              AnyAnx_SSRI_SE = factor_SE,
+                              AnyAnx_SSRI_FDR = factor_FDR))
+str(AnyAnxssri_taxa)
+#373 7
+head(AnyAnxssri_taxa)
+
+#5.2 SSRIs adj for AnyAnx
+SSRIAnyAnx <- ssri %>%
+        filter(factor == "AnyAnx_control" & drug == "SSRI")
+str(SSRIAnyAnx)
+#373 13
+
+SSRIAnyAnx_taxa <- SSRIAnyAnx[, c("taxa", "drug", "SSRI_coefficient", "SSRI_SE", "SSRI_FDR")]
+#373 5
+SSRIAnyAnx_taxa$SSRI_AnyAnx_lower_limit <- SSRIAnyAnx_taxa$SSRI_coefficient - 1.96 * SSRIAnyAnx_taxa$SSRI_SE
+SSRIAnyAnx_taxa$SSRI_AnyAnx_upper_limit <- SSRIAnyAnx_taxa$SSRI_coefficient + 1.96 * SSRIAnyAnx_taxa$SSRI_SE
+#373 7
+
+#rename variables and columns before merge
+SSRIAnyAnx_taxa$drug <- as.character(SSRIAnyAnx_taxa$drug)
+SSRIAnyAnx_taxa$drug[SSRIAnyAnx_taxa$drug=="SSRI"] <- "SSRI_disorder"
+SSRIAnyAnx_taxa <- rename (SSRIAnyAnx_taxa,
+                           c (SSRI_AnyAnx = drug,
+                              SSRI_AnyAnx_beta = SSRI_coefficient,
+                              SSRI_AnyAnx_SE = SSRI_SE,
+                              SSRI_AnyAnx_FDR = SSRI_FDR))
+str(SSRIAnyAnx_taxa)
+head(SSRIAnyAnx_taxa)
+
+#5.3 AnyAnx adj for PTDs
+AnyAnxptd <- ptdadj %>%
+        filter(factor == "AnyAnx_control")
+str(AnyAnxptd)
+#373 13
+
+AnyAnxptd_taxa <- AnyAnxptd[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+AnyAnxptd_taxa$AnyAnx_PTD_lower_limit <- AnyAnxptd_taxa$factor_coefficient - 1.96 * AnyAnxptd_taxa$factor_SE
+AnyAnxptd_taxa$AnyAnx_PTD_upper_limit <- AnyAnxptd_taxa$factor_coefficient + 1.96 * AnyAnxptd_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+AnyAnxptd_taxa$factor <- as.character(AnyAnxptd_taxa$factor)
+AnyAnxptd_taxa$factor[AnyAnxptd_taxa$factor=="AnyAnx_control"] <- "disorder_PTD"
+AnyAnxptd_taxa <- rename (AnyAnxptd_taxa,
+                          c (AnyAnx_PTD = factor,
+                             AnyAnx_PTD_beta = factor_coefficient,
+                             AnyAnx_PTD_SE = factor_SE,
+                             AnyAnx_PTD_FDR = factor_FDR))
+
+str(AnyAnxptd_taxa)
+head(AnyAnxptd_taxa)
+
+#5.4 PTDs adj for AnyAnx
+PTDAnyAnx <- ptdadj %>%
+        filter(factor == "AnyAnx_control" & drug == "PTD")
+str(PTDAnyAnx)
+#373 13
+
+PTDAnyAnx_taxa <- PTDAnyAnx[, c("taxa", "drug", "PTD_coefficient", "PTD_SE", "PTD_FDR")]
+
+PTDAnyAnx_taxa$PTD_AnyAnx_lower_limit <- PTDAnyAnx_taxa$PTD_coefficient - 1.96 * PTDAnyAnx_taxa$PTD_SE
+PTDAnyAnx_taxa$PTD_AnyAnx_upper_limit <- PTDAnyAnx_taxa$PTD_coefficient + 1.96 * PTDAnyAnx_taxa$PTD_SE
+
+#rename variables and columns before merge
+PTDAnyAnx_taxa$drug <- as.character(PTDAnyAnx_taxa$drug)
+PTDAnyAnx_taxa$drug[PTDAnyAnx_taxa$drug=="PTD"] <- "PTD_disorder"
+PTDAnyAnx_taxa <- rename (PTDAnyAnx_taxa,
+                          c (PTD_AnyAnx = drug,
+                             PTD_AnyAnx_beta = PTD_coefficient,
+                             PTD_AnyAnx_SE = PTD_SE,
+                             PTD_AnyAnx_FDR = PTD_FDR))
+str(PTDAnyAnx_taxa)
+head(PTDAnyAnx_taxa)
+
+#merge by taxa
+AnyAnx_taxa <- list(AnyAnxssri_taxa, SSRIAnyAnx_taxa, AnyAnxptd_taxa, PTDAnyAnx_taxa)
+AnyAnx_taxa <- AnyAnx_taxa %>% reduce(full_join, by= "taxa")
+str(AnyAnx_taxa)
+#373  25
+
+#condition 1 on FDR<0.05 (OR statements)
+AnyAnx_group <- AnyAnx_taxa %>%
+        filter(AnyAnx_SSRI_FDR <0.05 |
+                       SSRI_AnyAnx_FDR <0.05 |
+                       AnyAnx_PTD_FDR <0.05 |
+                       PTD_AnyAnx_FDR <0.05)
+dim(AnyAnx_group)
+#4 25
+
+#condition 2 on species level taxa only
+#remove characters until the last order/level of taxa
+AnyAnx_group$taxa <- sub(".+[|]", "",AnyAnx_group$taxa)
+#keep only spp level taxa
+AnyAnx_group <- AnyAnx_group[grepl("^s",AnyAnx_group$taxa),]
+dim(AnyAnx_group)
+#4 25
+
+AnyAnx_group$taxa
+
+#rename species to include disorder 
+AnyAnx_group$taxa <- sub("^","5_AnyAnx_",AnyAnx_group$taxa)
+
+AnyAnx_group$taxa
+
+#redefine datasets now that subsets have been made with overlapping taxa
+
+#5.1 AnyAnx adj for SSRIs
+AnyAnxssri_taxa_2 <- AnyAnx_group [, c("taxa", "AnyAnx_SSRI_beta", "AnyAnx_SSRI_lower_limit", "AnyAnx_SSRI_upper_limit", "AnyAnx_SSRI")]
+str(AnyAnxssri_taxa_2)
+#4 5
+
+AnyAnxssri_taxa_2 <- rename (AnyAnxssri_taxa_2, c(Beta = AnyAnx_SSRI_beta,
+                                                  Lower_limit = AnyAnx_SSRI_lower_limit,
+                                                  Upper_limit = AnyAnx_SSRI_upper_limit,
+                                                  Factor = AnyAnx_SSRI))
+
+#5.2 SSRIs adj for AnyAnx
+SSRIAnyAnx_taxa_2 <- AnyAnx_group [, c("taxa", "SSRI_AnyAnx_beta", "SSRI_AnyAnx_lower_limit", "SSRI_AnyAnx_upper_limit", "SSRI_AnyAnx")]
+str(SSRIAnyAnx_taxa_2)
+#4 5
+
+SSRIAnyAnx_taxa_2 <- rename (SSRIAnyAnx_taxa_2, c(Beta = SSRI_AnyAnx_beta,
+                                                  Lower_limit = SSRI_AnyAnx_lower_limit,
+                                                  Upper_limit = SSRI_AnyAnx_upper_limit,
+                                                  Factor = SSRI_AnyAnx))
+
+#5.3 AnyAnx adj for PTDs
+AnyAnxptd_taxa_2 <- AnyAnx_group [, c("taxa", "AnyAnx_PTD_beta", "AnyAnx_PTD_lower_limit", "AnyAnx_PTD_upper_limit", "AnyAnx_PTD")]
+str(AnyAnxptd_taxa_2)
+#4 5
+
+AnyAnxptd_taxa_2 <- rename (AnyAnxptd_taxa_2, c(Beta = AnyAnx_PTD_beta,
+                                                Lower_limit = AnyAnx_PTD_lower_limit,
+                                                Upper_limit = AnyAnx_PTD_upper_limit,
+                                                Factor = AnyAnx_PTD))
+
+#5.4 PTDs adj for AnyAnx
+PTDAnyAnx_taxa_2 <- AnyAnx_group [, c("taxa", "PTD_AnyAnx_beta", "PTD_AnyAnx_lower_limit", "PTD_AnyAnx_upper_limit", "PTD_AnyAnx")]
+str(PTDAnyAnx_taxa_2)
+#4 5
+
+PTDAnyAnx_taxa_2 <- rename (PTDAnyAnx_taxa_2, c(Beta = PTD_AnyAnx_beta,
+                                                Lower_limit = PTD_AnyAnx_lower_limit,
+                                                Upper_limit = PTD_AnyAnx_upper_limit,
+                                                Factor = PTD_AnyAnx))
+
+        #6. Figure 4 | GAD
+#6.1 GAD adj for SSRIs
+GADssri <- ssri %>%
+        filter(factor == "GAD_control")
+str(GADssri)
+#373 13
+
+GADssri_taxa <- GADssri[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+GADssri_taxa$GAD_SSRI_lower_limit <- GADssri_taxa$factor_coefficient - 1.96 * GADssri_taxa$factor_SE
+GADssri_taxa$GAD_SSRI_upper_limit <- GADssri_taxa$factor_coefficient + 1.96 * GADssri_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+GADssri_taxa$factor <- as.character(GADssri_taxa$factor)
+GADssri_taxa$factor[GADssri_taxa$factor=="GAD_control"] <- "disorder_SSRI"
+GADssri_taxa <- rename (GADssri_taxa,
+                        c (GAD_SSRI = factor,
+                           GAD_SSRI_beta = factor_coefficient,
+                           GAD_SSRI_SE = factor_SE,
+                           GAD_SSRI_FDR = factor_FDR))
+str(GADssri_taxa)
+#373 7
+head(GADssri_taxa)
+
+#6.2 SSRIs adj for GAD
+SSRIGAD <- ssri %>%
+        filter(factor == "GAD_control" & drug == "SSRI")
+str(SSRIGAD)
+#373 13
+
+SSRIGAD_taxa <- SSRIGAD[, c("taxa", "drug", "SSRI_coefficient", "SSRI_SE", "SSRI_FDR")]
+#373 5
+SSRIGAD_taxa$SSRI_GAD_lower_limit <- SSRIGAD_taxa$SSRI_coefficient - 1.96 * SSRIGAD_taxa$SSRI_SE
+SSRIGAD_taxa$SSRI_GAD_upper_limit <- SSRIGAD_taxa$SSRI_coefficient + 1.96 * SSRIGAD_taxa$SSRI_SE
+#373 7
+
+#rename variables and columns before merge
+SSRIGAD_taxa$drug <- as.character(SSRIGAD_taxa$drug)
+SSRIGAD_taxa$drug[SSRIGAD_taxa$drug=="SSRI"] <- "SSRI_disorder"
+SSRIGAD_taxa <- rename (SSRIGAD_taxa,
+                        c (SSRI_GAD = drug,
+                           SSRI_GAD_beta = SSRI_coefficient,
+                           SSRI_GAD_SE = SSRI_SE,
+                           SSRI_GAD_FDR = SSRI_FDR))
+str(SSRIGAD_taxa)
+head(SSRIGAD_taxa)
+
+#6.3 GAD adj for PTDs
+GADptd <- ptdadj %>%
+        filter(factor == "GAD_control")
+str(GADptd)
+#373 13
+
+GADptd_taxa <- GADptd[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+GADptd_taxa$GAD_PTD_lower_limit <- GADptd_taxa$factor_coefficient - 1.96 * GADptd_taxa$factor_SE
+GADptd_taxa$GAD_PTD_upper_limit <- GADptd_taxa$factor_coefficient + 1.96 * GADptd_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+GADptd_taxa$factor <- as.character(GADptd_taxa$factor)
+GADptd_taxa$factor[GADptd_taxa$factor=="GAD_control"] <- "disorder_PTD"
+GADptd_taxa <- rename (GADptd_taxa,
+                       c (GAD_PTD = factor,
+                          GAD_PTD_beta = factor_coefficient,
+                          GAD_PTD_SE = factor_SE,
+                          GAD_PTD_FDR = factor_FDR))
+
+str(GADptd_taxa)
+head(GADptd_taxa)
+
+#6.4 PTDs adj for GAD
+PTDGAD <- ptdadj %>%
+        filter(factor == "GAD_control" & drug == "PTD")
+str(PTDGAD)
+#373 13
+
+PTDGAD_taxa <- PTDGAD[, c("taxa", "drug", "PTD_coefficient", "PTD_SE", "PTD_FDR")]
+
+PTDGAD_taxa$PTD_GAD_lower_limit <- PTDGAD_taxa$PTD_coefficient - 1.96 * PTDGAD_taxa$PTD_SE
+PTDGAD_taxa$PTD_GAD_upper_limit <- PTDGAD_taxa$PTD_coefficient + 1.96 * PTDGAD_taxa$PTD_SE
+
+#rename variables and columns before merge
+PTDGAD_taxa$drug <- as.character(PTDGAD_taxa$drug)
+PTDGAD_taxa$drug[PTDGAD_taxa$drug=="PTD"] <- "PTD_disorder"
+PTDGAD_taxa <- rename (PTDGAD_taxa,
+                       c (PTD_GAD = drug,
+                          PTD_GAD_beta = PTD_coefficient,
+                          PTD_GAD_SE = PTD_SE,
+                          PTD_GAD_FDR = PTD_FDR))
+str(PTDGAD_taxa)
+head(PTDGAD_taxa)
+
+#merge by taxa
+GAD_taxa <- list(GADssri_taxa, SSRIGAD_taxa, GADptd_taxa, PTDGAD_taxa)
+GAD_taxa <- GAD_taxa %>% reduce(full_join, by= "taxa")
+str(GAD_taxa)
+#373  25
+
+#condition 1 on FDR<0.05 (OR statements)
+GAD_group <- GAD_taxa %>%
+        filter(GAD_SSRI_FDR <0.05 |
+                       SSRI_GAD_FDR <0.05 |
+                       GAD_PTD_FDR <0.05 |
+                       PTD_GAD_FDR <0.05)
+dim(GAD_group)
+#2 25
+
+#condition 2 on species level taxa only
+#remove characters until the last order/level of taxa
+GAD_group$taxa <- sub(".+[|]", "",GAD_group$taxa)
+#keep only spp level taxa
+GAD_group <- GAD_group[grepl("^s",GAD_group$taxa),]
+dim(GAD_group)
+#2 25
+
+GAD_group$taxa
+
+#rename species to include disorder 
+GAD_group$taxa <- sub("^","6_GAD_",GAD_group$taxa)
+
+GAD_group$taxa
+
+#redefine datasets now that subsets have been made with overlapping taxa
+
+#6.1 GAD adj for SSRIs
+GADssri_taxa_2 <- GAD_group [, c("taxa", "GAD_SSRI_beta", "GAD_SSRI_lower_limit", "GAD_SSRI_upper_limit", "GAD_SSRI")]
+str(GADssri_taxa_2)
+#2 5
+
+GADssri_taxa_2 <- rename (GADssri_taxa_2, c(Beta = GAD_SSRI_beta,
+                                            Lower_limit = GAD_SSRI_lower_limit,
+                                            Upper_limit = GAD_SSRI_upper_limit,
+                                            Factor = GAD_SSRI))
+
+#6.2 SSRIs adj for GAD
+SSRIGAD_taxa_2 <- GAD_group [, c("taxa", "SSRI_GAD_beta", "SSRI_GAD_lower_limit", "SSRI_GAD_upper_limit", "SSRI_GAD")]
+str(SSRIGAD_taxa_2)
+#2 5
+
+SSRIGAD_taxa_2 <- rename (SSRIGAD_taxa_2, c(Beta = SSRI_GAD_beta,
+                                            Lower_limit = SSRI_GAD_lower_limit,
+                                            Upper_limit = SSRI_GAD_upper_limit,
+                                            Factor = SSRI_GAD))
+
+#6.3 GAD adj for PTDs
+GADptd_taxa_2 <- GAD_group [, c("taxa", "GAD_PTD_beta", "GAD_PTD_lower_limit", "GAD_PTD_upper_limit", "GAD_PTD")]
+str(GADptd_taxa_2)
+#2 5
+
+GADptd_taxa_2 <- rename (GADptd_taxa_2, c(Beta = GAD_PTD_beta,
+                                          Lower_limit = GAD_PTD_lower_limit,
+                                          Upper_limit = GAD_PTD_upper_limit,
+                                          Factor = GAD_PTD))
+
+#6.4 PTDs adj for GAD
+PTDGAD_taxa_2 <- GAD_group [, c("taxa", "PTD_GAD_beta", "PTD_GAD_lower_limit", "PTD_GAD_upper_limit", "PTD_GAD")]
+str(PTDGAD_taxa_2)
+#2 5
+
+PTDGAD_taxa_2 <- rename (PTDGAD_taxa_2, c(Beta = PTD_GAD_beta,
+                                          Lower_limit = PTD_GAD_lower_limit,
+                                          Upper_limit = PTD_GAD_upper_limit,
+                                          Factor = PTD_GAD))
+
+        #7. Figure 4g | LTGAD
+#7.1 LTGAD adj for SSRIs
+LTGADssri <- ssri %>%
+        filter(factor == "LTGADonly_control")
+str(LTGADssri)
+#373 13
+
+LTGADssri_taxa <- LTGADssri[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+LTGADssri_taxa$LTGAD_SSRI_lower_limit <- LTGADssri_taxa$factor_coefficient - 1.96 * LTGADssri_taxa$factor_SE
+LTGADssri_taxa$LTGAD_SSRI_upper_limit <- LTGADssri_taxa$factor_coefficient + 1.96 * LTGADssri_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+LTGADssri_taxa$factor <- as.character(LTGADssri_taxa$factor)
+LTGADssri_taxa$factor[LTGADssri_taxa$factor=="LTGADonly_control"] <- "disorder_SSRI"
+LTGADssri_taxa <- rename (LTGADssri_taxa,
+                          c (LTGAD_SSRI = factor,
+                             LTGAD_SSRI_beta = factor_coefficient,
+                             LTGAD_SSRI_SE = factor_SE,
+                             LTGAD_SSRI_FDR = factor_FDR))
+str(LTGADssri_taxa)
+#373 7
+head(LTGADssri_taxa)
+
+#7.2 SSRIs adj for LTGAD
+SSRILTGAD <- ssri %>%
+        filter(factor == "LTGADonly_control" & drug == "SSRI")
+str(SSRILTGAD)
+#373 13
+
+SSRILTGAD_taxa <- SSRILTGAD[, c("taxa", "drug", "SSRI_coefficient", "SSRI_SE", "SSRI_FDR")]
+#373 5
+SSRILTGAD_taxa$SSRI_LTGAD_lower_limit <- SSRILTGAD_taxa$SSRI_coefficient - 1.96 * SSRILTGAD_taxa$SSRI_SE
+SSRILTGAD_taxa$SSRI_LTGAD_upper_limit <- SSRILTGAD_taxa$SSRI_coefficient + 1.96 * SSRILTGAD_taxa$SSRI_SE
+#373 7
+
+#rename variables and columns before merge
+SSRILTGAD_taxa$drug <- as.character(SSRILTGAD_taxa$drug)
+SSRILTGAD_taxa$drug[SSRILTGAD_taxa$drug=="SSRI"] <- "SSRI_disorder"
+SSRILTGAD_taxa <- rename (SSRILTGAD_taxa,
+                          c (SSRI_LTGAD = drug,
+                             SSRI_LTGAD_beta = SSRI_coefficient,
+                             SSRI_LTGAD_SE = SSRI_SE,
+                             SSRI_LTGAD_FDR = SSRI_FDR))
+str(SSRILTGAD_taxa)
+head(SSRILTGAD_taxa)
+
+#7.3 LTGAD adj for PTDs
+LTGADptd <- ptdadj %>%
+        filter(factor == "LTGADonly_control")
+str(LTGADptd)
+#373 13
+
+LTGADptd_taxa <- LTGADptd[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+LTGADptd_taxa$LTGAD_PTD_lower_limit <- LTGADptd_taxa$factor_coefficient - 1.96 * LTGADptd_taxa$factor_SE
+LTGADptd_taxa$LTGAD_PTD_upper_limit <- LTGADptd_taxa$factor_coefficient + 1.96 * LTGADptd_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+LTGADptd_taxa$factor <- as.character(LTGADptd_taxa$factor)
+LTGADptd_taxa$factor[LTGADptd_taxa$factor=="LTGADonly_control"] <- "disorder_PTD"
+LTGADptd_taxa <- rename (LTGADptd_taxa,
+                         c (LTGAD_PTD = factor,
+                            LTGAD_PTD_beta = factor_coefficient,
+                            LTGAD_PTD_SE = factor_SE,
+                            LTGAD_PTD_FDR = factor_FDR))
+
+str(LTGADptd_taxa)
+head(LTGADptd_taxa)
+
+#7.4 PTDs adj for LTGAD
+PTDLTGAD <- ptdadj %>%
+        filter(factor == "LTGADonly_control" & drug == "PTD")
+str(PTDLTGAD)
+#373 13
+
+PTDLTGAD_taxa <- PTDLTGAD[, c("taxa", "drug", "PTD_coefficient", "PTD_SE", "PTD_FDR")]
+
+PTDLTGAD_taxa$PTD_LTGAD_lower_limit <- PTDLTGAD_taxa$PTD_coefficient - 1.96 * PTDLTGAD_taxa$PTD_SE
+PTDLTGAD_taxa$PTD_LTGAD_upper_limit <- PTDLTGAD_taxa$PTD_coefficient + 1.96 * PTDLTGAD_taxa$PTD_SE
+
+#rename variables and columns before merge
+PTDLTGAD_taxa$drug <- as.character(PTDLTGAD_taxa$drug)
+PTDLTGAD_taxa$drug[PTDLTGAD_taxa$drug=="PTD"] <- "PTD_disorder"
+PTDLTGAD_taxa <- rename (PTDLTGAD_taxa,
+                         c (PTD_LTGAD = drug,
+                            PTD_LTGAD_beta = PTD_coefficient,
+                            PTD_LTGAD_SE = PTD_SE,
+                            PTD_LTGAD_FDR = PTD_FDR))
+str(PTDLTGAD_taxa)
+head(PTDLTGAD_taxa)
+
+#merge by taxa
+LTGAD_taxa <- list(LTGADssri_taxa, SSRILTGAD_taxa, LTGADptd_taxa, PTDLTGAD_taxa)
+LTGAD_taxa <- LTGAD_taxa %>% reduce(full_join, by= "taxa")
+str(LTGAD_taxa)
+#373  25
+
+#condition 1 on FDR<0.05 (OR statements)
+LTGAD_group <- LTGAD_taxa %>%
+        filter(LTGAD_SSRI_FDR <0.05 |
+                       SSRI_LTGAD_FDR <0.05 |
+                       LTGAD_PTD_FDR <0.05 |
+                       PTD_LTGAD_FDR <0.05)
+dim(LTGAD_group)
+#1 25
+
+#condition 2 on species level taxa only
+#remove characters until the last order/level of taxa
+LTGAD_group$taxa <- sub(".+[|]", "",LTGAD_group$taxa)
+#keep only spp level taxa
+LTGAD_group <- LTGAD_group[grepl("^s",LTGAD_group$taxa),]
+dim(LTGAD_group)
+#1 25
+
+LTGAD_group$taxa
+
+#rename species to include disorder 
+LTGAD_group$taxa <- sub("^","7_LT-GAD_",LTGAD_group$taxa)
+
+LTGAD_group$taxa
+
+#redefine datasets now that subsets have been made with overlapping taxa
+
+#7.1 LTGAD adj for SSRIs
+LTGADssri_taxa_2 <- LTGAD_group [, c("taxa", "LTGAD_SSRI_beta", "LTGAD_SSRI_lower_limit", "LTGAD_SSRI_upper_limit", "LTGAD_SSRI")]
+str(LTGADssri_taxa_2)
+#1 5
+
+LTGADssri_taxa_2 <- rename (LTGADssri_taxa_2, c(Beta = LTGAD_SSRI_beta,
+                                                Lower_limit = LTGAD_SSRI_lower_limit,
+                                                Upper_limit = LTGAD_SSRI_upper_limit,
+                                                Factor = LTGAD_SSRI))
+
+#7.2 SSRIs adj for LTGAD
+SSRILTGAD_taxa_2 <- LTGAD_group [, c("taxa", "SSRI_LTGAD_beta", "SSRI_LTGAD_lower_limit", "SSRI_LTGAD_upper_limit", "SSRI_LTGAD")]
+str(SSRILTGAD_taxa_2)
+#1 5
+
+SSRILTGAD_taxa_2 <- rename (SSRILTGAD_taxa_2, c(Beta = SSRI_LTGAD_beta,
+                                                Lower_limit = SSRI_LTGAD_lower_limit,
+                                                Upper_limit = SSRI_LTGAD_upper_limit,
+                                                Factor = SSRI_LTGAD))
+
+#7.3 LTGAD adj for PTDs
+LTGADptd_taxa_2 <- LTGAD_group [, c("taxa", "LTGAD_PTD_beta", "LTGAD_PTD_lower_limit", "LTGAD_PTD_upper_limit", "LTGAD_PTD")]
+str(LTGADptd_taxa_2)
+#1 5
+
+LTGADptd_taxa_2 <- rename (LTGADptd_taxa_2, c(Beta = LTGAD_PTD_beta,
+                                              Lower_limit = LTGAD_PTD_lower_limit,
+                                              Upper_limit = LTGAD_PTD_upper_limit,
+                                              Factor = LTGAD_PTD))
+
+#7.4 PTDs adj for LTGAD
+PTDLTGAD_taxa_2 <- LTGAD_group [, c("taxa", "PTD_LTGAD_beta", "PTD_LTGAD_lower_limit", "PTD_LTGAD_upper_limit", "PTD_LTGAD")]
+str(PTDLTGAD_taxa_2)
+#1 5
+
+PTDLTGAD_taxa_2 <- rename (PTDLTGAD_taxa_2, c(Beta = PTD_LTGAD_beta,
+                                              Lower_limit = PTD_LTGAD_lower_limit,
+                                              Upper_limit = PTD_LTGAD_upper_limit,
+                                              Factor = PTD_LTGAD))
+
+        #8. Figure 4 | NEO
+#8.1 NEO adj for SSRIs
+#NEOssri <- ssri %>%
+#        filter(factor == "NEO.Neuroticism_Complete_1a_tran")
+#str(NEOssri)
+#373 13
+
+#NEOssri_taxa <- NEOssri[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+#NEOssri_taxa$NEO_SSRI_lower_limit <- NEOssri_taxa$factor_coefficient - 1.96 * NEOssri_taxa$factor_SE
+#NEOssri_taxa$NEO_SSRI_upper_limit <- NEOssri_taxa$factor_coefficient + 1.96 * NEOssri_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+#NEOssri_taxa$factor <- as.character(NEOssri_taxa$factor)
+#NEOssri_taxa$factor[NEOssri_taxa$factor=="NEO.Neuroticism_Complete_1a_tran"] <- "disorder_SSRI"
+#NEOssri_taxa <- rename (NEOssri_taxa,
+#                        c (NEO_SSRI = factor,
+#                           NEO_SSRI_beta = factor_coefficient,
+#                           NEO_SSRI_SE = factor_SE,
+#                           NEO_SSRI_FDR = factor_FDR))
+#str(NEOssri_taxa)
+#373 7
+#head(NEOssri_taxa)
+
+#8.2 SSRIs adj for NEO
+#SSRINEO <- ssri %>%
+#        filter(factor == "NEO.Neuroticism_Complete_1a_tran" & drug == "SSRI")
+#str(SSRINEO)
+#373 13
+
+#SSRINEO_taxa <- SSRINEO[, c("taxa", "drug", "SSRI_coefficient", "SSRI_SE", "SSRI_FDR")]
+#373 5
+#SSRINEO_taxa$SSRI_NEO_lower_limit <- SSRINEO_taxa$SSRI_coefficient - 1.96 * SSRINEO_taxa$SSRI_SE
+#SSRINEO_taxa$SSRI_NEO_upper_limit <- SSRINEO_taxa$SSRI_coefficient + 1.96 * SSRINEO_taxa$SSRI_SE
+#373 7
+
+#rename variables and columns before merge
+#SSRINEO_taxa$drug <- as.character(SSRINEO_taxa$drug)
+#SSRINEO_taxa$drug[SSRINEO_taxa$drug=="SSRI"] <- "SSRI_disorder"
+#SSRINEO_taxa <- rename (SSRINEO_taxa,
+#                        c (SSRI_NEO = drug,
+#                           SSRI_NEO_beta = SSRI_coefficient,
+#                           SSRI_NEO_SE = SSRI_SE,
+#                           SSRI_NEO_FDR = SSRI_FDR))
+#str(SSRINEO_taxa)
+#head(SSRINEO_taxa)
+
+#8.3 NEO adj for PTDs
+#NEOptd <- ptdadj %>%
+#        filter(factor == "NEO.Neuroticism_Complete_1a_tran")
+#str(NEOptd)
+#373 13
+
+#NEOptd_taxa <- NEOptd[, c("taxa", "factor", "factor_coefficient", "factor_SE", "factor_FDR")]
+#373 5
+#NEOptd_taxa$NEO_PTD_lower_limit <- NEOptd_taxa$factor_coefficient - 1.96 * NEOptd_taxa$factor_SE
+#NEOptd_taxa$NEO_PTD_upper_limit <- NEOptd_taxa$factor_coefficient + 1.96 * NEOptd_taxa$factor_SE
+#373 7
+
+#rename variables and columns before merge
+#NEOptd_taxa$factor <- as.character(NEOptd_taxa$factor)
+#NEOptd_taxa$factor[NEOptd_taxa$factor=="NEO.Neuroticism_Complete_1a_tran"] <- "disorder_PTD"
+#NEOptd_taxa <- rename (NEOptd_taxa,
+#                       c (NEO_PTD = factor,
+#                          NEO_PTD_beta = factor_coefficient,
+#                          NEO_PTD_SE = factor_SE,
+#                          NEO_PTD_FDR = factor_FDR))
+
+#str(NEOptd_taxa)
+#head(NEOptd_taxa)
+
+#8.4 PTDs adj for NEO
+#PTDNEO <- ptdadj %>%
+#        filter(factor == "NEO.Neuroticism_Complete_1a_tran" & drug == "PTD")
+#str(PTDNEO)
+#373 13
+
+#PTDNEO_taxa <- PTDNEO[, c("taxa", "drug", "PTD_coefficient", "PTD_SE", "PTD_FDR")]
+
+#PTDNEO_taxa$PTD_NEO_lower_limit <- PTDNEO_taxa$PTD_coefficient - 1.96 * PTDNEO_taxa$PTD_SE
+#PTDNEO_taxa$PTD_NEO_upper_limit <- PTDNEO_taxa$PTD_coefficient + 1.96 * PTDNEO_taxa$PTD_SE
+
+#rename variables and columns before merge
+#PTDNEO_taxa$drug <- as.character(PTDNEO_taxa$drug)
+#PTDNEO_taxa$drug[PTDNEO_taxa$drug=="PTD"] <- "PTD_disorder"
+#PTDNEO_taxa <- rename (PTDNEO_taxa,
+#                       c (PTD_NEO = drug,
+#                          PTD_NEO_beta = PTD_coefficient,
+#                          PTD_NEO_SE = PTD_SE,
+#                          PTD_NEO_FDR = PTD_FDR))
+#str(PTDNEO_taxa)
+#head(PTDNEO_taxa)
+
+#merge by taxa
+#NEO_taxa <- list(NEOssri_taxa, SSRINEO_taxa, NEOptd_taxa, PTDNEO_taxa)
+#NEO_taxa <- NEO_taxa %>% reduce(full_join, by= "taxa")
+#str(NEO_taxa)
+#373  25
+
+#condition 1 on FDR<0.05 (OR statements)
+#NEO_group <- NEO_taxa %>%
+#        filter(NEO_SSRI_FDR <0.05 |
+#                       SSRI_NEO_FDR <0.05 |
+#                       NEO_PTD_FDR <0.05 |
+#                       PTD_NEO_FDR <0.05)
+#dim(NEO_group)
+#1 25
+
+#condition 2 on species level taxa only
+#remove characters until the last order/level of taxa
+#NEO_group$taxa <- sub(".+[|]", "",NEO_group$taxa)
+#keep only spp level taxa
+#NEO_group <- NEO_group[grepl("^s",NEO_group$taxa),]
+#dim(NEO_group)
+#1 25
+
+#NEO_group$taxa
+
+#rename species to include disorder 
+#NEO_group$taxa <- sub("^","8_Neuroticism_",NEO_group$taxa)
+
+#NEO_group$taxa
+
+#redefine datasets now that subsets have been made with overlapping taxa
+
+#8.1 NEO adj for SSRIs
+#NEOssri_taxa_2 <- NEO_group [, c("taxa", "NEO_SSRI_beta", "NEO_SSRI_lower_limit", "NEO_SSRI_upper_limit", "NEO_SSRI")]
+#str(NEOssri_taxa_2)
+#1 5
+
+#NEOssri_taxa_2 <- rename (NEOssri_taxa_2, c(Beta = NEO_SSRI_beta,
+#                                            Lower_limit = NEO_SSRI_lower_limit,
+#                                            Upper_limit = NEO_SSRI_upper_limit,
+#                                            Factor = NEO_SSRI))
+
+#8.2 SSRIs adj for NEO
+#SSRINEO_taxa_2 <- NEO_group [, c("taxa", "SSRI_NEO_beta", "SSRI_NEO_lower_limit", "SSRI_NEO_upper_limit", "SSRI_NEO")]
+#str(SSRINEO_taxa_2)
+#1 5
+
+#SSRINEO_taxa_2 <- rename (SSRINEO_taxa_2, c(Beta = SSRI_NEO_beta,
+#                                            Lower_limit = SSRI_NEO_lower_limit,
+#                                            Upper_limit = SSRI_NEO_upper_limit,
+#                                            Factor = SSRI_NEO))
+
+#8.3 NEO adj for PTDs
+#NEOptd_taxa_2 <- NEO_group [, c("taxa", "NEO_PTD_beta", "NEO_PTD_lower_limit", "NEO_PTD_upper_limit", "NEO_PTD")]
+#str(NEOptd_taxa_2)
+#1 5
+
+#NEOptd_taxa_2 <- rename (NEOptd_taxa_2, c(Beta = NEO_PTD_beta,
+#                                          Lower_limit = NEO_PTD_lower_limit,
+#                                          Upper_limit = NEO_PTD_upper_limit,
+#                                          Factor = NEO_PTD))
+
+#8.4 PTDs adj for NEO
+#PTDNEO_taxa_2 <- NEO_group [, c("taxa", "PTD_NEO_beta", "PTD_NEO_lower_limit", "PTD_NEO_upper_limit", "PTD_NEO")]
+#str(PTDNEO_taxa_2)
+#1 5
+
+#PTDNEO_taxa_2 <- rename (PTDNEO_taxa_2, c(Beta = PTD_NEO_beta,
+#                                          Lower_limit = PTD_NEO_lower_limit,
+#                                          Upper_limit = PTD_NEO_upper_limit,
+#                                          Factor = PTD_NEO))
+
+#bind rows
+tidy_taxa <- bind_rows(AnyDepssri_taxa_2, SSRIanydep_taxa_2, AnyDepptd_taxa_2, PTDanydep_taxa_2,
+                       DYSssri_taxa_2, SSRIdys_taxa_2, DYSptd_taxa_2, PTDdys_taxa_2,
+                       MDDssri_taxa_2, SSRIMDD_taxa_2, MDDptd_taxa_2, PTDMDD_taxa_2,
+                       LTMDDssri_taxa_2, SSRILTMDD_taxa_2, LTMDDptd_taxa_2, PTDLTMDD_taxa_2,
+                       AnyAnxssri_taxa_2, SSRIAnyAnx_taxa_2, AnyAnxptd_taxa_2, PTDAnyAnx_taxa_2,
+                       GADssri_taxa_2, SSRIGAD_taxa_2, GADptd_taxa_2, PTDGAD_taxa_2,
+                       LTGADssri_taxa_2, SSRILTGAD_taxa_2, LTGADptd_taxa_2, PTDLTGAD_taxa_2)
+#                       NEOssri_taxa_2, SSRINEO_taxa_2, NEOptd_taxa_2, PTDNEO_taxa_2)
+#148 5
+
+str(tidy_taxa)
+
+tidy_taxa$taxa
+
+tidy_taxa <- as_tibble(tidy_taxa)
+
+tidy_taxa$Factor <- factor(tidy_taxa$Factor, 
+                           levels=c("PTD_disorder", "SSRI_disorder", "disorder_PTD", "disorder_SSRI"))
+
+#ggplots
+pdf(file = "all_taxa_associations.pdf", width = 20, height = 10, useDingbats = F)
+p = ggplot(tidy_taxa,
+           aes(x = Factor,y = Beta, ymin = Lower_limit, ymax = Upper_limit ))+
+        geom_pointrange(aes(col=Factor), shape=19, fatten=2, size=0.5)+
+        geom_hline(aes(fill=Factor),yintercept =0, linetype=2)+
+        xlab("")+ ylab("Effect size")+
+        geom_errorbar(aes(ymin=Lower_limit, ymax=Upper_limit,col=Factor),width=0.5)+ 
+        facet_wrap(~taxa, ncol=5) +
+        theme_bw() +
+        #        scale_color_viridis_d() +
+        scale_colour_brewer(palette = "Set1") + 
+        theme(plot.title=element_text(size=16,face="bold"),
+              axis.text.y=element_blank(),
+              axis.ticks.y=element_blank(),
+              axis.text.x=element_text(face="bold"),
+              axis.title=element_text(size=12,face="bold"),
+              strip.text.y = element_text(hjust=0,vjust = 1,angle=180,face="bold")) +
+        coord_flip()
+p
+dev.off()
