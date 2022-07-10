@@ -1,0 +1,1064 @@
+#start interactive session on the cluster:  srun --cpus-per-task=1 --mem=5gb --nodes=1 --qos=interactive --time=04:00:00 --pty bash -i
+#load R module:                             ml RPlus
+#start R (R version 4.0.3 (2020-10-10):     R
+
+###     SCRIPT: SUMMARY STATISTICS PSYCH-MICRO
+###     AUTHOR(S): SIOBHAN BRUSHETT 
+###     DESCRIPTION: BIVARIATE ANYLSIS OF PSYCH-MICROBIOME PHENOTYPE SUBSET
+###     PROJECT: PSYCH-MICROBIOME
+###     NOTE(S): http://www.sthda.com/english/wiki/correlation-matrix-a-quick-start-guide-to-analyze-format-and-visualize-a-correlation-matrix-using-r-software
+###              https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
+###              DYS HAS BEEN REMOVED AS ITS PRESENCE IS EXLCUSIVE TO THE PRESENCES OF MDD, THUS 
+###              ANY_DEPRESSION (WHICH ENCOMPASSES BOTH MDD AND DYS) ACCOUNTS FOR THIS (moreover, sample size for Dys
+###              is relatively small)
+###              UPDATED 20.02.2022 to update summary stats with antimicrobials [from dagboek] and remove antibiotics(3m)[for Hermie] due to relevance
+###              UPDATED 12.03.2022 to incorporate dysthymia and PPIs
+
+##Contents of this file
+
+## 0. LOAD DATA
+## 1. FACTORISE DATA
+## 2. SUBSET DATA
+## 3. MAKE DATA NUMERIC AND RENAME
+## 4. CORRELATION FUNCTION AND PLOT
+
+library(tidyverse)
+
+        # =============== 0. LOAD DATA   ================ ##
+
+phenotypes = read.csv("27.08.2021_transformed_phenotypes_control.csv", header=T, as.is=T, sep=",", row.names = 1)
+dim(phenotypes)
+# 7656  234
+
+#numeric summary statistics
+
+#AnyDep
+AnyDep_numeric <- phenotypes %>%
+        #filter for complete cases
+        filter(is.na(AnyDep_control) == F) %>%
+        #group by AnyDep_control
+        group_by(AnyDep_control) %>%
+        #select numeric variables
+        select (ANTHRO.AGE, ANTHRO.BMI, EXP.DIET.Scores.LLDietScore,
+                NEO.Neuroticism_Complete_1a,PANAS.Negative_Affect_2b) %>%
+        #group_by(N = n(), add = T) %>%
+        #obtain summary statistis
+        summarise_all(list(mean = ~ mean(., na.rm=T), sd = ~ sd (., na.rm=T),
+                      median = ~ median (., na.rm=T), 
+                      min = ~ min (., na.rm=T), max = ~ max (., na.rm=T),
+                      IQR = ~ IQR (., na.rm = T))) 
+
+#pvalues
+
+#AnyDep_control and age
+t.test(ANTHRO.AGE ~ AnyDep_control, data=phenotypes)
+#t = 3.0792, df = 246.27, p-value = 0.002311
+
+#AnyDep_control and BMI
+wilcox.test(ANTHRO.BMI ~ AnyDep_control, data=phenotypes)
+#W = 537076, p-value = 0.0003787
+
+#AnyDep_control and LLDS
+t.test(EXP.DIET.Scores.LLDietScore ~ AnyDep_control, data=phenotypes)
+#t = 1.4832, df = 230.29, p-value = 0.1394
+
+#AnyDep_control and NEO
+t.test(NEO.Neuroticism_Complete_1a ~ AnyDep_control, data=phenotypes)
+#t = -8.0828, df = 66.723, p-value = 1.753e-11
+
+#AnyDep_control and NA
+wilcox.test(PANAS.Negative_Affect_2b ~ AnyDep_control, data=phenotypes)
+#x <- wilcox.test(PANAS.Negative_Affect_2b ~ AnyDep_control, data=phenotypes)
+#x$p.value
+#1.681114e-28
+
+#MDD
+MDD_numeric <- phenotypes %>%
+        #filter for complete cases
+        filter(is.na(MDD_control) == F) %>%
+        #group by MDD_control
+        group_by(MDD_control) %>%
+        #select numeric variables
+        select (ANTHRO.AGE, ANTHRO.BMI, EXP.DIET.Scores.LLDietScore,
+                NEO.Neuroticism_Complete_1a,PANAS.Negative_Affect_2b) %>%
+        #obtain summary statistis
+        summarise_all(list(mean = ~ mean(., na.rm=T), sd = ~ sd (., na.rm=T),
+                           median = ~ median (., na.rm=T), 
+                           min = ~ min (., na.rm=T), max = ~ max (., na.rm=T),
+                           IQR = ~ IQR (., na.rm = T)))
+
+#pvalues
+
+#MDD_control and age
+t.test(ANTHRO.AGE ~ MDD_control, data=phenotypes)
+#t = 2.0143, df = 164.95, p-value = 0.04561
+
+#MDD_control and BMI
+wilcox.test(ANTHRO.BMI ~ MDD_control, data=phenotypes)
+#W = 352602, p-value = 0.0001093
+
+#MDD_control and LLDS
+t.test(EXP.DIET.Scores.LLDietScore ~ MDD_control, data=phenotypes)
+#t = 1.595, df = 155.61, p-value = 0.1127
+
+#MDD_control and NEO
+t.test(NEO.Neuroticism_Complete_1a ~ MDD_control, data=phenotypes)
+#t = -5.6789, df = 46.47, p-value = 8.489e-07
+
+#MDD_control and NA
+wilcox.test(PANAS.Negative_Affect_2b ~ MDD_control, data=phenotypes)
+#x <- wilcox.test(PANAS.Negative_Affect_2b ~ MDD_control, data=phenotypes)
+#x$p.value
+#5.977212e-19
+
+
+#DYS
+DYS_numeric <- phenotypes %>%
+        #filter for complete cases
+        filter(is.na(DYS_control) == F) %>%
+        #group by DYS_control
+        group_by(DYS_control) %>%
+        #select numeric variables
+        select (ANTHRO.AGE, ANTHRO.BMI, EXP.DIET.Scores.LLDietScore,
+                NEO.Neuroticism_Complete_1a,PANAS.Negative_Affect_2b) %>%
+        #obtain summary statistis
+        summarise_all(list(mean = ~ mean(., na.rm=T), sd = ~ sd (., na.rm=T),
+                           median = ~ median (., na.rm=T), 
+                           min = ~ min (., na.rm=T), max = ~ max (., na.rm=T),
+                           IQR = ~ IQR (., na.rm = T)))
+
+#pvalues
+
+#DYS_control and age
+t.test(ANTHRO.AGE ~ DYS_control, data=phenotypes)
+#t = 2.6005, df = 71.036, p-value = 0.01132
+
+#DYS_control and BMI
+wilcox.test(ANTHRO.BMI ~ DYS_control, data=phenotypes)
+#W = 184475, p-value = 0.5123
+
+#DYS_control and LLDS
+t.test(EXP.DIET.Scores.LLDietScore ~ DYS_control, data=phenotypes)
+#t = 0.27416, df = 67.406, p-value = 0.7848
+
+#DYS_control and NEO
+t.test(NEO.Neuroticism_Complete_1a ~ DYS_control, data=phenotypes)
+#t = -6.9188, df = 18.249, p-value = 1.684e-06
+
+#DYS_control and NA
+wilcox.test(PANAS.Negative_Affect_2b ~ DYS_control, data=phenotypes)
+#W = 19452, p-value = 1.303e-11
+
+
+#LTMDD
+LTMDD_numeric <- phenotypes %>%
+        #filter for complete cases
+        filter(is.na(LTMDDonly_control) == F) %>%
+        #group by LTMDD_control
+        group_by(LTMDDonly_control) %>%
+        #select numeric variables
+        select (ANTHRO.AGE, ANTHRO.BMI, EXP.DIET.Scores.LLDietScore,
+                NEO.Neuroticism_Complete_1a,PANAS.Negative_Affect_2b) %>%
+        #obtain summary statistis
+        summarise_all(list(mean = ~ mean(., na.rm=T), sd = ~ sd (., na.rm=T),
+                           median = ~ median (., na.rm=T), 
+                           min = ~ min (., na.rm=T), max = ~ max (., na.rm=T),
+                           IQR = ~ IQR (., na.rm = T)))
+
+#p-values
+#LTMDD_control and age
+t.test(ANTHRO.AGE ~ LTMDDonly_control, data=phenotypes)
+#t = 2.2395, df = 982.5, p-value = 0.02535
+
+#LTMDD_control and BMI
+wilcox.test(ANTHRO.BMI ~ LTMDDonly_control, data=phenotypes)
+#W = 2064736, p-value = 0.9442
+
+#LTMDD_control and LLDS
+t.test(EXP.DIET.Scores.LLDietScore ~ LTMDDonly_control, data=phenotypes)
+#t = -2.6998, df = 923.81, p-value = 0.007066
+
+#LTMDD_control and NEO
+t.test(NEO.Neuroticism_Complete_1a ~ LTMDDonly_control, data=phenotypes)
+#t = -8.5066, df = 321.5, p-value = 6.883e-16
+
+#LTMDD_control and NA
+wilcox.test(PANAS.Negative_Affect_2b ~ LTMDDonly_control, data=phenotypes)
+#x <- wilcox.test(PANAS.Negative_Affect_2b ~ LTMDD_control, data=phenotypes)
+#x$p.value
+#1.996695e-37
+
+#AnyAnx
+AnyAnx_numeric <- phenotypes %>%
+        #filter for complete cases
+        filter(is.na(AnyAnx_control) == F) %>%
+        #group by AnyAnx_control
+        group_by(AnyAnx_control) %>%
+        #select numeric variables
+        select (ANTHRO.AGE, ANTHRO.BMI, EXP.DIET.Scores.LLDietScore,
+                NEO.Neuroticism_Complete_1a,PANAS.Negative_Affect_2b) %>%
+        #obtain summary statistis
+        summarise_all(list(mean = ~ mean(., na.rm=T), sd = ~ sd (., na.rm=T),
+                           median = ~ median (., na.rm=T), 
+                           min = ~ min (., na.rm=T), max = ~ max (., na.rm=T),
+                           IQR = ~ IQR (., na.rm = T)))
+
+#p-values
+#AnyAnx_control and age
+t.test(ANTHRO.AGE ~ AnyAnx_control, data=phenotypes)
+#t = 6.0234, df = 453.05, p-value = 3.536e-09
+
+#AnyAnx_control and BMI
+wilcox.test(ANTHRO.BMI ~ AnyAnx_control, data=phenotypes)
+#W = 1085426, p-value = 0.4879
+
+#AnyAnx_control and LLDS
+t.test(EXP.DIET.Scores.LLDietScore ~ AnyAnx_control, data=phenotypes)
+#t = 0.18787, df = 421.49, p-value = 0.8511
+
+#AnyAnx_control and NEO
+t.test(NEO.Neuroticism_Complete_1a ~ AnyAnx_control, data=phenotypes)
+#x= t.test(NEO.Neuroticism_Complete_1a ~ AnyAnx_control, data=phenotypes)
+#x$p.value
+#6.975985e-20
+
+#AnyAnx_control and NA
+wilcox.test(PANAS.Negative_Affect_2b ~ AnyAnx_control, data=phenotypes)
+#x <- wilcox.test(PANAS.Negative_Affect_2b ~ AnyAnx_control, data=phenotypes)
+#x$p.value
+#1.858724e-38
+
+#GAD
+GAD_numeric <- phenotypes %>%
+        #filter for complete cases
+        filter(is.na(GAD_control) == F) %>%
+        #group by GAD_control
+        group_by(GAD_control) %>%
+        #select numeric variables
+        select (ANTHRO.AGE, ANTHRO.BMI, EXP.DIET.Scores.LLDietScore,
+                NEO.Neuroticism_Complete_1a,PANAS.Negative_Affect_2b) %>%
+        #obtain summary statistis
+        summarise_all(list(mean = ~ mean(., na.rm=T), sd = ~ sd (., na.rm=T),
+                           median = ~ median (., na.rm=T), 
+                           min = ~ min (., na.rm=T), max = ~ max (., na.rm=T),
+                           IQR = ~ IQR (., na.rm = T)))
+
+#p-values
+#GAD_control and age
+t.test(ANTHRO.AGE ~ GAD_control, data=phenotypes)
+#t = 4.9487, df = 393.11, p-value = 1.11e-06
+
+#GAD_control and BMI
+wilcox.test(ANTHRO.BMI ~ GAD_control, data=phenotypes)
+#W = 947841, p-value = 0.6949
+
+#GAD_control and LLDS
+t.test(EXP.DIET.Scores.LLDietScore ~ GAD_control, data=phenotypes)
+#t = 0.31022, df = 366.29, p-value = 0.7566
+
+#GAD_control and NEO
+t.test(NEO.Neuroticism_Complete_1a ~ GAD_control, data=phenotypes)
+#t = -9.4885, df = 115.49, p-value = 3.89e-16
+
+#GAD_control and NA
+wilcox.test(PANAS.Negative_Affect_2b ~ GAD_control, data=phenotypes)
+#x <- wilcox.test(PANAS.Negative_Affect_2b ~ GAD_control, data=phenotypes)
+#x$p.value
+#13.281341e-36
+
+#LTGAD
+LTGAD_numeric <- phenotypes %>%
+        #filter for complete cases
+        filter(is.na(LTGADonly_control) == F) %>%
+        #group by LTGAD_control
+        group_by(LTGADonly_control) %>%
+        #select numeric variables
+        select (ANTHRO.AGE, ANTHRO.BMI, EXP.DIET.Scores.LLDietScore,
+                NEO.Neuroticism_Complete_1a,PANAS.Negative_Affect_2b) %>%
+        #obtain summary statistis
+        summarise_all(list(mean = ~ mean(., na.rm=T), sd = ~ sd (., na.rm=T),
+                           median = ~ median (., na.rm=T), 
+                           min = ~ min (., na.rm=T), max = ~ max (., na.rm=T),
+                           IQR = ~ IQR (., na.rm = T)))
+
+#p-values
+#LTGAD_control and age
+t.test(ANTHRO.AGE ~ LTGADonly_control, data=phenotypes)
+#t = -0.0044992, df = 268.49, p-value = 0.9964
+
+#LTGAD_control and BMI
+wilcox.test(ANTHRO.BMI ~ LTGADonly_control, data=phenotypes)
+#W = 659013, p-value = 0.639
+
+#LTGAD_control and LLDS
+t.test(EXP.DIET.Scores.LLDietScore ~ LTGADonly_control, data=phenotypes)
+#t = -1.7262, df = 258.96, p-value = 0.0855
+
+#LTGAD_control and NEO
+t.test(NEO.Neuroticism_Complete_1a ~ LTGADonly_control, data=phenotypes)
+#t = -7.3165, df = 93.038, p-value = 8.819e-11
+
+#LTGAD_control and NA
+wilcox.test(PANAS.Negative_Affect_2b ~ LTGADonly_control, data=phenotypes)
+#x <- wilcox.test(PANAS.Negative_Affect_2b ~ LTGADonly_control, data=phenotypes)
+#x$p.value
+#1.999335e-17
+
+numeric_summary_stats <- cbind(AnyDep_numeric, MDD_numeric, LTMDD_numeric,
+                               AnyAnx_numeric, GAD_numeric, LTGAD_numeric)
+
+write.table(numeric_summary_stats, "numeric_summary_stats.txt", sep="\t", row.names=F, quote = F)                       
+                      
+#categorical
+#AnyDep and Sex
+AnyDep_sex <- phenotypes %>%
+        with(gmodels::CrossTable(AnyDep_control,ANTHRO.Sex,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#AnyDep and antibiotic use
+#AnyDep_antibiotics <- phenotypes %>%
+#        with(gmodels::CrossTable(AnyDep_control,META.Antibiotics_3m,
+#                                 chisq=T,
+#                                 prop.r=T,
+#                                 prop.t=T,
+#                                 prop.chisq=T,
+#                                 expected=T))
+
+#AnyDep and antimicrobials
+table(phenotypes$MED.MEDS.Antibacterials_ATC_J01, useNA = "ifany")
+# N    Y
+#7606   50
+phenotypes$MED.MEDS.Antibacterials_ATC_J01 <- as.factor(phenotypes$MED.MEDS.Antibacterials_ATC_J01)
+
+AnyDep_antibiotics <- phenotypes %>%
+        with(gmodels::CrossTable(AnyDep_control,MED.MEDS.Antibacterials_ATC_J01,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#AnyDep and PPIs
+table(phenotypes$MED.MEDS.PPIs_ATC_A02BC, useNA = "ifany")
+#N    Y
+#7111  545
+phenotypes$MED.MEDS.PPIs_ATC_A02BC <- as.factor(phenotypes$MED.MEDS.PPIs_ATC_A02BC)
+
+AnyDep_PPIs <- phenotypes %>%
+        with(gmodels::CrossTable(AnyDep_control,MED.MEDS.PPIs_ATC_A02BC,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+
+#AnyDep and MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB
+AnyDep_med <- phenotypes %>%
+        with(gmodels::CrossTable(AnyDep_control, MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+
+#AnyDep and MED.MEDS.Tricyclic_antidepressants_ATC_N06AA
+AnyDep_med <- phenotypes %>%
+        with(gmodels::CrossTable(AnyDep_control, MED.MEDS.Tricyclic_antidepressants_ATC_N06AA,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#AnyDep and MED.MEDS.Benzodiazepine_agonists_ATC_N05
+AnyDep_med <- phenotypes %>%
+        with(gmodels::CrossTable(AnyDep_control, MED.MEDS.Benzodiazepine_agonists_ATC_N05,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#AnyDep and MED.MEDS.Psychoanaleptics_ATC_N06
+AnyDep_med <- phenotypes %>%
+        with(gmodels::CrossTable(AnyDep_control, MED.MEDS.Psychoanaleptics_ATC_N06,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#AnyDep and MED.MEDS.Antipsychotics_atypical_ATC_N05AH
+AnyDep_med <- phenotypes %>%
+        with(gmodels::CrossTable(AnyDep_control, MED.MEDS.Antipsychotics_atypical_ATC_N05AH,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#AnyDep and MED.MEDS.Psycholeptics_ATC_N05
+AnyDep_med <- phenotypes %>%
+        with(gmodels::CrossTable(AnyDep_control, MED.MEDS.Psycholeptics_ATC_N05,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#AnyDep and CURRENT_TREATMENT.Mental_Health
+AnyDep_med <- phenotypes %>%
+        with(gmodels::CrossTable(AnyDep_control, CURRENT_TREATMENT.Mental_Health,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#MDD and Sex
+MDD_sex <- phenotypes %>%
+        with(gmodels::CrossTable(MDD_control,ANTHRO.Sex,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#MDD and antibiotic use
+#MDD_antibiotics <- phenotypes %>%
+#        with(gmodels::CrossTable(MDD_control,META.Antibiotics_3m,
+#                                 chisq=T,
+#                                 prop.r=T,
+#                                 prop.t=T,
+#                                 prop.chisq=T,
+#                                 expected=T))
+
+#MDD and antibiotic use
+MDD_antibiotics <- phenotypes %>%
+        with(gmodels::CrossTable(MDD_control,MED.MEDS.Antibacterials_ATC_J01,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#MDD and PPI use
+MDD_PPIs <- phenotypes %>%
+        with(gmodels::CrossTable(MDD_control,MED.MEDS.PPIs_ATC_A02BC,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+
+#MDD and MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB
+MDD_med <- phenotypes %>%
+        with(gmodels::CrossTable(MDD_control,MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#MDD and MED.MEDS.Tricyclic_antidepressants_ATC_N06AA
+MDD_med <- phenotypes %>%
+        with(gmodels::CrossTable(MDD_control,MED.MEDS.Tricyclic_antidepressants_ATC_N06AA,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#MDD and MED.MEDS.Benzodiazepine_agonists_ATC_N05
+MDD_med <- phenotypes %>%
+        with(gmodels::CrossTable(MDD_control,MED.MEDS.Benzodiazepine_agonists_ATC_N05,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#MDD and MED.MEDS.Psychoanaleptics_ATC_N06
+MDD_med <- phenotypes %>%
+        with(gmodels::CrossTable(MDD_control,MED.MEDS.Psychoanaleptics_ATC_N06,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#MDD and MED.MEDS.Antipsychotics_atypical_ATC_N05AH
+MDD_med <- phenotypes %>%
+        with(gmodels::CrossTable(MDD_control,MED.MEDS.Antipsychotics_atypical_ATC_N05AH,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#MDD and MED.MEDS.Psycholeptics_ATC_N05
+MDD_med <- phenotypes %>%
+        with(gmodels::CrossTable(MDD_control,MED.MEDS.Psycholeptics_ATC_N05,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#MDD and CURRENT_TREATMENT.Mental_Health
+MDD_med <- phenotypes %>%
+        with(gmodels::CrossTable(MDD_control,CURRENT_TREATMENT.Mental_Health,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#DYS and Sex
+DYS_sex <- phenotypes %>%
+        with(gmodels::CrossTable(DYS_control,ANTHRO.Sex,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#DYS and antibiotic use
+#DYS_antibiotics <- phenotypes %>%
+#        with(gmodels::CrossTable(DYS_control,META.Antibiotics_3m,
+#                                 chisq=T,
+#                                 prop.r=T,
+#                                 prop.t=T,
+#                                 prop.chisq=T,
+#                                 expected=T))
+
+#DYS and antibiotic use
+DYS_antibiotics <- phenotypes %>%
+        with(gmodels::CrossTable(DYS_control,MED.MEDS.Antibacterials_ATC_J01,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#DYS and PPI use
+DYS_PPIs <- phenotypes %>%
+        with(gmodels::CrossTable(DYS_control,MED.MEDS.PPIs_ATC_A02BC,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#DYS and MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB
+DYS_med <- phenotypes %>%
+        with(gmodels::CrossTable(DYS_control,MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#DYS and MED.MEDS.Tricyclic_antidepressants_ATC_N06AA
+DYS_med <- phenotypes %>%
+        with(gmodels::CrossTable(DYS_control,MED.MEDS.Tricyclic_antidepressants_ATC_N06AA,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#DYS and MED.MEDS.Benzodiazepine_agonists_ATC_N05
+DYS_med <- phenotypes %>%
+        with(gmodels::CrossTable(DYS_control,MED.MEDS.Benzodiazepine_agonists_ATC_N05,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#DYS and MED.MEDS.Psychoanaleptics_ATC_N06
+DYS_med <- phenotypes %>%
+        with(gmodels::CrossTable(DYS_control,MED.MEDS.Psychoanaleptics_ATC_N06,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#DYS and MED.MEDS.Antipsychotics_atypical_ATC_N05AH
+DYS_med <- phenotypes %>%
+        with(gmodels::CrossTable(DYS_control,MED.MEDS.Antipsychotics_atypical_ATC_N05AH,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#DYS and MED.MEDS.Psycholeptics_ATC_N05
+DYS_med <- phenotypes %>%
+        with(gmodels::CrossTable(DYS_control,MED.MEDS.Psycholeptics_ATC_N05,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#DYS and CURRENT_TREATMENT.Mental_Health
+DYS_med <- phenotypes %>%
+        with(gmodels::CrossTable(DYS_control,CURRENT_TREATMENT.Mental_Health,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#LTMDD and Sex
+LTMDD_sex <- phenotypes %>%
+        with(gmodels::CrossTable(LTMDDonly_control,ANTHRO.Sex,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#LTMDD and antibiotic use
+#LTMDD_antibiotics <- phenotypes %>%
+#        with(gmodels::CrossTable(LTMDDonly_control,META.Antibiotics_3m,
+#                                 chisq=T,
+#                                 prop.r=T,
+#                                 prop.t=T,
+#                                 prop.chisq=T,
+#                                 expected=T))
+
+#LTMDD and antibiotic use
+LTMDD_antibiotics <- phenotypes %>%
+        with(gmodels::CrossTable(LTMDDonly_control,MED.MEDS.Antibacterials_ATC_J01,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#LTMDD and PPI use
+LTMDD_PPIs <- phenotypes %>%
+        with(gmodels::CrossTable(LTMDDonly_control,MED.MEDS.PPIs_ATC_A02BC,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+
+#LTMDD and MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB
+LTMDD_med <- phenotypes %>%
+        with(gmodels::CrossTable(LTMDDonly_control, MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#LTMDD and MED.MEDS.Tricyclic_antidepressants_ATC_N06AA
+LTMDD_med <- phenotypes %>%
+        with(gmodels::CrossTable(LTMDDonly_control, MED.MEDS.Tricyclic_antidepressants_ATC_N06AA,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#LTMDD and MED.MEDS.Benzodiazepine_agonists_ATC_N05
+LTMDD_med <- phenotypes %>%
+        with(gmodels::CrossTable(LTMDDonly_control, MED.MEDS.Benzodiazepine_agonists_ATC_N05,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#LTMDD and MED.MEDS.Psychoanaleptics_ATC_N06
+LTMDD_med <- phenotypes %>%
+        with(gmodels::CrossTable(LTMDDonly_control, MED.MEDS.Psychoanaleptics_ATC_N06,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#LTMDD and MED.MEDS.Antipsychotics_atypical_ATC_N05AH
+LTMDD_med <- phenotypes %>%
+        with(gmodels::CrossTable(LTMDDonly_control, MED.MEDS.Antipsychotics_atypical_ATC_N05AH,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#LTMDD and MED.MEDS.Psycholeptics_ATC_N05
+LTMDD_med <- phenotypes %>%
+        with(gmodels::CrossTable(LTMDDonly_control, MED.MEDS.Psycholeptics_ATC_N05,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#LTMDD and CURRENT_TREATMENT.Mental_Health
+LTMDD_med <- phenotypes %>%
+        with(gmodels::CrossTable(LTMDDonly_control, CURRENT_TREATMENT.Mental_Health,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#AnyAnx and Sex
+AnyAnx_sex <- phenotypes %>%
+        with(gmodels::CrossTable(AnyAnx_control,ANTHRO.Sex,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#AnyAnx and antibiotic use
+#AnyAnx_antibiotics <- phenotypes %>%
+#        with(gmodels::CrossTable(AnyAnx_control,META.Antibiotics_3m,
+#                                 chisq=T,
+#                                 prop.r=T,
+#                                 prop.t=T,
+#                                 prop.chisq=T,
+#                                 expected=T))
+
+AnyAnx_antibiotics <- phenotypes %>%
+        with(gmodels::CrossTable(AnyAnx_control,MED.MEDS.Antibacterials_ATC_J01,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#AnyAnx and PPIs
+AnyAnx_PPIs <- phenotypes %>%
+        with(gmodels::CrossTable(AnyAnx_control,MED.MEDS.PPIs_ATC_A02BC,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#AnyAnx and MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB
+AnyAnx_med <- phenotypes %>%
+        with(gmodels::CrossTable(AnyAnx_control,MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#AnyAnx and MED.MEDS.Tricyclic_antidepressants_ATC_N06AA
+AnyAnx_med <- phenotypes %>%
+        with(gmodels::CrossTable(AnyAnx_control,MED.MEDS.Tricyclic_antidepressants_ATC_N06AA,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#AnyAnx and MED.MEDS.Benzodiazepine_agonists_ATC_N05
+AnyAnx_med <- phenotypes %>%
+        with(gmodels::CrossTable(AnyAnx_control,MED.MEDS.Benzodiazepine_agonists_ATC_N05,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#AnyAnx and MED.MEDS.Psychoanaleptics_ATC_N06
+AnyAnx_med <- phenotypes %>%
+        with(gmodels::CrossTable(AnyAnx_control,MED.MEDS.Psychoanaleptics_ATC_N06,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#AnyAnx and MED.MEDS.Antipsychotics_atypical_ATC_N05AH
+AnyAnx_med <- phenotypes %>%
+        with(gmodels::CrossTable(AnyAnx_control,MED.MEDS.Antipsychotics_atypical_ATC_N05AH,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#AnyAnx and MED.MEDS.Psycholeptics_ATC_N05
+AnyAnx_med <- phenotypes %>%
+        with(gmodels::CrossTable(AnyAnx_control,MED.MEDS.Psycholeptics_ATC_N05,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#AnyAnx and CURRENT_TREATMENT.Mental_Health
+AnyAnx_med <- phenotypes %>%
+        with(gmodels::CrossTable(AnyAnx_control,CURRENT_TREATMENT.Mental_Health,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#GAD and Sex
+GAD_sex <- phenotypes %>%
+        with(gmodels::CrossTable(GAD_control,ANTHRO.Sex,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#GAD and antibiotic use
+#GAD_antibiotics <- phenotypes %>%
+#        with(gmodels::CrossTable(GAD_control,META.Antibiotics_3m,
+#                                 chisq=T,
+#                                 prop.r=T,
+#                                 prop.t=T,
+#                                 prop.chisq=T,
+#                                 expected=T))
+
+#GAD and antibiotic use
+GAD_antibiotics <- phenotypes %>%
+        with(gmodels::CrossTable(GAD_control,MED.MEDS.Antibacterials_ATC_J01,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#GAD and PPIs
+GAD_PPIs <- phenotypes %>%
+        with(gmodels::CrossTable(GAD_control,MED.MEDS.PPIs_ATC_A02BC,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#GAD and MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB
+GAD_med <- phenotypes %>%
+        with(gmodels::CrossTable(GAD_control, MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#GAD and MED.MEDS.Tricyclic_antidepressants_ATC_N06AA
+GAD_med <- phenotypes %>%
+        with(gmodels::CrossTable(GAD_control, MED.MEDS.Tricyclic_antidepressants_ATC_N06AA,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#GAD and MED.MEDS.Benzodiazepine_agonists_ATC_N05
+GAD_med <- phenotypes %>%
+        with(gmodels::CrossTable(GAD_control, MED.MEDS.Benzodiazepine_agonists_ATC_N05,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#GAD and MED.MEDS.Psychoanaleptics_ATC_N06
+GAD_med <- phenotypes %>%
+        with(gmodels::CrossTable(GAD_control, MED.MEDS.Psychoanaleptics_ATC_N06,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#GAD and MED.MEDS.Antipsychotics_atypical_ATC_N05AH
+GAD_med <- phenotypes %>%
+        with(gmodels::CrossTable(GAD_control, MED.MEDS.Antipsychotics_atypical_ATC_N05AH,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#GAD and MED.MEDS.Psycholeptics_ATC_N05
+GAD_med <- phenotypes %>%
+        with(gmodels::CrossTable(GAD_control, MED.MEDS.Psycholeptics_ATC_N05,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#GAD and CURRENT_TREATMENT.Mental_Health
+GAD_med <- phenotypes %>%
+        with(gmodels::CrossTable(GAD_control, CURRENT_TREATMENT.Mental_Health,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#LTGAD and Sex
+LTGAD_sex <- phenotypes %>%
+        with(gmodels::CrossTable(LTGADonly_control,ANTHRO.Sex,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#LTGAD and antibiotic use
+#LTGAD_antibiotics <- phenotypes %>%
+#        with(gmodels::CrossTable(LTGADonly_control,META.Antibiotics_3m,
+#                                 chisq=T,
+#                                 prop.r=T,
+#                                 prop.t=T,
+#                                 prop.chisq=T,
+#                                 expected=T))
+
+#LTGAD and antibiotic use
+LTGAD_antibiotics <- phenotypes %>%
+        with(gmodels::CrossTable(LTGADonly_control,MED.MEDS.Antibacterials_ATC_J01,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#LTGAD and PPIs
+LTGAD_PPIs <- phenotypes %>%
+        with(gmodels::CrossTable(LTGADonly_control,MED.MEDS.PPIs_ATC_A02BC,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#LTGAD and MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB
+LTGAD_med <- phenotypes %>%
+        with(gmodels::CrossTable(LTGADonly_control, MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+
+#LTGAD and MED.MEDS.Tricyclic_antidepressants_ATC_N06AA
+LTGAD_med <- phenotypes %>%
+        with(gmodels::CrossTable(LTGADonly_control, MED.MEDS.Tricyclic_antidepressants_ATC_N06AA,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#LTGAD and MED.MEDS.Benzodiazepine_agonists_ATC_N05
+LTGAD_med <- phenotypes %>%
+        with(gmodels::CrossTable(LTGADonly_control, MED.MEDS.Benzodiazepine_agonists_ATC_N05,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#LTGAD and MED.MEDS.Psychoanaleptics_ATC_N06
+LTGAD_med <- phenotypes %>%
+        with(gmodels::CrossTable(LTGADonly_control, MED.MEDS.Psychoanaleptics_ATC_N06,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#LTGAD and MED.MEDS.Antipsychotics_atypical_ATC_N05AH
+LTGAD_med <- phenotypes %>%
+        with(gmodels::CrossTable(LTGADonly_control, MED.MEDS.Antipsychotics_atypical_ATC_N05AH,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#LTGAD and MED.MEDS.Psycholeptics_ATC_N05
+LTGAD_med <- phenotypes %>%
+        with(gmodels::CrossTable(LTGADonly_control, MED.MEDS.Psycholeptics_ATC_N05,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
+#warning for chisq.test, therefore used continuity correction p-value
+
+#LTGAD and CURRENT_TREATMENT.Mental_Health
+LTGAD_med <- phenotypes %>%
+        with(gmodels::CrossTable(LTGADonly_control, CURRENT_TREATMENT.Mental_Health,
+                                 chisq=T,
+                                 prop.r=T,
+                                 prop.t=T,
+                                 prop.chisq=T,
+                                 expected=T))
