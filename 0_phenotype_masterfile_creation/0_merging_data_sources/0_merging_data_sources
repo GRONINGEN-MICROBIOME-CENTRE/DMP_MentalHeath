@@ -1,0 +1,665 @@
+###     SCRIPT: DAG3_MENTALHEALTH_MASTERFILE
+###     AUTHOR(S): SIOBHAN BRUSHETT
+###     DESCRIPTION: CREATION OF DAG3 MENTAL HEALTH PROJECT MASTERFILE
+###     PROJECT: PSYCH-MICROBIOME
+###     NOTE(S): Because Lifelines new release incl. 'VARIANT_ID' which separates out participant data by questionnaire type, if 
+###     variables are pulled all together, duplications arise in data. Therefore, subsets are needed for each phenotype 'type' and then merged
+
+##Contents of this file
+
+## 0. DAG3 phenotypes
+## 1. Lifelines wave 1a questionnaire variables (incl. renaming)
+## 2. Lifelines wave 1a visit variables (incl. renaming)
+## 3. Lifelines wave 2a questionnaire variables (incl. renaming)
+## 4. Lifelines wave 2b questionnaire variables (incl. renaming)
+## 5. Lifelines wave 2a visit variables (incl. renaming)
+## 6. BIONIC data
+## 7. Merging of files to one Master file > DAG3_MentalHealth_Masterfile
+
+##libraries
+library(tidyverse)
+
+        ## =============== 0. DAG3 PHENOTYPES   ================ ##
+
+
+#DAG3 Masterfile location: 
+#oirginal location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/DAG3_data_ready/phenotypes/v27/
+#my directory: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/DAG3
+
+
+DAG3_pheno <-  read.csv("DAG3_metadata_merged_ready_v27.csv", header=T, as.is=T, sep=",")
+
+dim(DAG3_pheno)
+#8229 244 
+
+str(DAG3_pheno)
+
+DAG3_pheno <- DAG3_pheno [ , c("DAG3_sampleID",
+                               "ANTHRO.AGE",
+                               "ANTHRO.BMI",
+                               "ANTHRO.Sex",
+                               "EXP.DIET.ECorrected.AlchAll",
+                               "EXP.DIET.Scores.LLDietScore",
+                               "EXP.EARLYLIFE.LIVINGPLACE.child.1.4",
+                               "EXP.PETS.now.Any",
+                               "EXP.PETS.now.Cat",
+                               "EXP.PETS.now.Dog",
+                               "MED.DISEASES.Cancer.AnyNonBasal",
+                               "MED.DISEASES.Gastrointestinal.Autoimmune.IBD.CD",
+                               "MED.DISEASES.Gastrointestinal.Autoimmune.IBD.UC",
+                               "MED.DISEASES.Gastrointestinal.Rome3_IBS.Any",
+                               "MED.DISEASES.Gastrointestinal.Rome3_IBS.TypeC",
+                               "MED.DISEASES.Gastrointestinal.Rome3_IBS.TypeM",
+                               "MED.DISEASES.Gastrointestinal.Rome3_IBS.TypeD",
+                               "MED.DISEASES.Gastrointestinal.FGID.Bloating",
+                               "MED.DISEASES.Gastrointestinal.FGID.Constipation",
+                               "MED.DISEASES.Gastrointestinal.FGID.Diarrhea",
+                               "MED.DISEASES.Gastrointestinal.Discomfort.Unwell",
+                               "MED.DISEASES.Gastrointestinal.Discomfort.Pain",
+                               "MED.DISEASES.Gastrointestinal.Discomfort.Bloating",
+                               "MED.DISEASES.Gastrointestinal.Discomfort.Flatulence",
+                               "MED.DISEASES.Gastrointestinal.Discomfort.Burping",
+                               "MED.DISEASES.Gastrointestinal.Discomfort.Nausea",
+                               "MED.DISEASES.Rome3_IBS.factor",
+                               "MED.DISEASES.Mental.Addiction.Any",
+                               "MED.DISEASES.Mental.ADHD",
+                               "MED.DISEASES.Mental.Agoraphobia",
+                               "MED.DISEASES.Mental.Any",
+                               "MED.DISEASES.Mental.Bipolar",
+                               "MED.DISEASES.Mental.Burn.Out",
+                               "MED.DISEASES.Mental.Depression",
+                               "MED.DISEASES.Mental.Eating.disorder",
+                               "MED.DISEASES.Mental.OCD",
+                               "MED.DISEASES.Mental.Other.anxiety",
+                               "MED.DISEASES.Mental.Panic.disorder",
+                               "MED.DISEASES.Mental.Social.phobia",
+                               "MED.DISEASES.Neurological.Autoimmune.Multiple.Sclerosis",
+                               "MED.DISEASES.Neurological.Dizziness.Falling",
+                               "MED.DISEASES.Neurological.Epilepsy",
+                               "MED.DISEASES.Neurological.Headaches.Duration",
+                               "MED.DISEASES.Neurological.Headaches.HowOften",
+                               "MED.DISEASES.Neurological.Mental.Fatigue.Chronic",
+                               "MED.DISEASES.Neurological.Mental.Fibromyalgia",
+                               "MED.DISEASES.Neurological.Migraine",
+                               "MED.DISEASES.Neurological.Seizure.Fit",
+                               "MED.DISEASES.Neurological.Stroke",
+                               "MED.DISEASES.None.No.Diseases",
+                               "MED.HEALTH.RAND.Health.Change.1y",
+                               "MED.HEALTH.RAND.Health.General",
+                               "MED.MEDS.Antibacterials_ATC_J01",
+                               "MED.MEDS.Antipsychotics_atypical_ATC_N05AH",
+                               "MED.MEDS.Benzodiazepine_agonists_ATC_N05",
+                               "MED.MEDS.Intestinal_antiinflammatory_agents_ATC_A07E",
+                               "MED.MEDS.Other_NervousSystem_ATC_N",
+                               "MED.MEDS.PPIs_ATC_A02BC",
+                               "MED.MEDS.Psychoanaleptics_ATC_N06",
+                               "MED.MEDS.Psycholeptics_ATC_N05",
+                               "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                               "MED.MEDS.SexHormones_AndModulators_ATC_G03",
+                               "MED.MEDS.Tricyclic_antidepressants_ATC_N06AA",
+                               "MED.MEDS.Vitamine_B_ATC_A11DA",
+                               "MED.MEDS.Vitamine_D_ATC_A11CC",
+                               "MED.MEDS.Vitamine_supplements_ATC_A11A",
+                               "META.Antibiotics_3m",
+                               "META.BATCH",
+                               "META.DNA.conc.ng.ul",
+                               "META.DNA.postclean.reads",
+                               "META.POOP.BristolMean",
+                               "META.POOP.COLLECTION_SEASON",
+                               "META.POOP.Freq",
+                               "SOCIOEC.INCOME.Income.Month",
+                               "SOCIOEC.WORK.Paidwork.any",
+                               "SOCIOEC.WORK.Unemployed",
+                               "SOCIOECONOMIC.BUURT.Highincome.Pop.Prop",
+                               "SOCIOECONOMIC.BUURT.Lowincome.Pop.Prop",
+                               "SOCIOECONOMIC.BUURT.Urbanicity")]
+
+dim(DAG3_pheno)
+#8229 79
+
+##see script 29.03.2021_pseudo_linking.R for overview of how linkage file was created.
+##located here: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/linking_files
+
+DAG3_link <- read.csv("31.03.2021_DAG3_LL_link.csv", header=T, as.is=T, sep=",")
+
+#remove columns X.1, and X (not necessary)
+
+DAG3_link = subset(DAG3_link, select = -c(X.1,X))
+
+DAG3_pheno <- left_join(DAG3_pheno, DAG3_link, by="DAG3_sampleID")
+dim(DAG3_pheno)
+#8299 82
+str(DAG3_pheno)
+
+write.csv(DAG3_pheno, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/DAG3/05.05.2021_DAG3_pheno.csv") 
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/DAG3
+
+        ## =============== 1. LL_1a QUESTIONNAIRE VARIABLES   ================ ##
+
+##ALL Lifelines csv files originate from this location: /groups/umcg-lifelines/prm03/releases/pheno_lifelines/v2/results
+
+#1a_q_1_results.csv
+
+LL_1aq1 <-  read.csv("1a_q_1_results.csv", header=T, as.is=T, sep=",")
+dim(LL_1aq1)
+#151113    772
+
+#SUBSETS
+        #alzheimers
+
+LL_1aq1_alz <- LL_1aq1 [ , c("PROJECT_PSEUDO_ID", "VARIANT_ID", "alzheimers_presence_adu_q_2")]
+
+LL_1aq1_alz <- LL_1aq1_alz %>% rename("VARIANT_ID_1aq1_alz" ="VARIANT_ID", "alzheimers_presence_1a" = "alzheimers_presence_adu_q_2")
+
+        #parkinsons
+
+LL_1aq1_park <- LL_1aq1 [ , c("PROJECT_PSEUDO_ID", "VARIANT_ID", "parkinsons_presence_adu_q_1")]
+
+LL_1aq1_park <- LL_1aq1_park %>% rename("VARIANT_ID_1aq1_park" ="VARIANT_ID", "parkinsons_presence_1a" = "parkinsons_presence_adu_q_1")
+      
+          #hormonal contraception
+
+LL_1aq1_hor <- LL_1aq1 [ , c("PROJECT_PSEUDO_ID", "VARIANT_ID", "hormonal_contraception_adu_q_1")]
+
+LL_1aq1_hor <- LL_1aq1_hor %>% rename("VARIANT_ID_1aq1_hor" ="VARIANT_ID", "hormonal_contraception_1a1" = "hormonal_contraception_adu_q_1")
+
+
+        #educational attainment (proxy of number of completed questionnaires w/o duplicates)
+
+LL_1aq1_edu <- LL_1aq1 [ , c("PROJECT_PSEUDO_ID", "VARIANT_ID", "educational_attainment_adu_c_1")]
+
+LL_1aq1_edu <- LL_1aq1_edu %>% rename("VARIANT_ID_1aq1_edu" ="VARIANT_ID", "educational_attainment_1a" = "educational_attainment_adu_c_1")
+dim(LL_1aq1_edu)
+#151113 3
+
+#MERGE
+LL_alz_park = merge(LL_1aq1_alz, LL_1aq1_park, by="PROJECT_PSEUDO_ID")
+LL_alz_park_hor = merge (LL_alz_park, LL_1aq1_hor, by="PROJECT_PSEUDO_ID")
+LL_1aq1 = merge (LL_alz_park_hor, LL_1aq1_edu, by="PROJECT_PSEUDO_ID")
+dim(LL_1aq1)
+#151113 3
+
+str(LL_1aq1)
+
+write.csv(LL_1aq1, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets/05.05.2021_LL1aq1.csv")
+
+#1a_q_2_results.csv
+
+LL_1aq2 <-  read.csv("1a_q_2_results.csv", header=T, as.is=T, sep=",")
+dim(LL_1aq2)
+#143601    925
+
+#SUBSETS
+        #hormonal contraception
+LL_1aq2_hor <- LL_1aq2 [ , c("PROJECT_PSEUDO_ID", "VARIANT_ID", "hormonal_contraception_adu_q_1")]
+
+
+LL_1aq2_hor <- LL_1aq2_hor %>% rename("VARIANT_ID_1aq2_hor" ="VARIANT_ID", "hormonal_contraception_1a2" ="hormonal_contraception_adu_q_1")
+
+        #PANAS
+LL_1aq2_pan <- LL_1aq2 [ , c("PROJECT_PSEUDO_ID", "VARIANT_ID","panas_hostile_adu_q_08",
+                         "panas_irritable_adu_q_11", "panas_ashamed_adu_q_13", "panas_guilty_adu_q_06", "panas_distressed_adu_q_02",
+                         "panas_upset_adu_q_04", "panas_scared_adu_q_07", "panas_afraid_adu_q_20", "panas_jittery_adu_q_18", "panas_nervous_adu_q_15",
+                         "panas_attentive_adu_q_17", "panas_active_adu_q_19", "panas_alert_adu_q_12", "panas_excited_adu_q_03", 
+                         "panas_enthusiastic_adu_q_09", "panas_determined_adu_q_16", "panas_inspired_adu_q_14", "panas_proud_adu_q_10",
+                         "panas_interested_adu_q_01", "panas_strong_adu_q_05")]
+
+LL_1aq2_pan <- LL_1aq2_pan %>% rename("VARIANT_ID_1aq2_pan" ="VARIANT_ID","panas_hostile_1a" = "panas_hostile_adu_q_08",
+                              "panas_irritable_1a" = "panas_irritable_adu_q_11", "panas_ashamed_1a" = "panas_ashamed_adu_q_13", "panas_guilty_1a" = "panas_guilty_adu_q_06","panas_distressed_1a" = "panas_distressed_adu_q_02",
+                              "panas_upset_1a" = "panas_upset_adu_q_04", "panas_scared_1a" = "panas_scared_adu_q_07", "panas_afraid_1a" = "panas_afraid_adu_q_20", "panas_jittery_1a" = "panas_jittery_adu_q_18", "panas_nervous_1a" = "panas_nervous_adu_q_15",
+                              "panas_attentive_1a" = "panas_attentive_adu_q_17", "panas_active_1a" =  "panas_active_adu_q_19","panas_alert_1a" = "panas_alert_adu_q_12", "panas_excited_1a" = "panas_excited_adu_q_03", 
+                              "panas_enthusiastic_1a" = "panas_enthusiastic_adu_q_09", "panas_determined_1a" = "panas_determined_adu_q_16", "panas_inspired_1a" = "panas_inspired_adu_q_14", "panas_proud_1a" = "panas_proud_adu_q_10",
+                              "panas_interested_1a" = "panas_interested_adu_q_01", "panas_strong_1a" = "panas_strong_adu_q_05")
+
+        #NEO
+LL_1aq2_neo <- LL_1aq2 [ , c("PROJECT_PSEUDO_ID", "VARIANT_ID","neo_anxiety_adu_q_65", "neo_anxiety_adu_q_68", "neo_anxiety_adu_q_74",
+                         "neo_anxiety_adu_q_83", "neo_anxiety_adu_q_88", "neo_anxiety_adu_q_92", "neo_anxiety_adu_q_96", "neo_tense_adu_q_79",
+                         "neo_hostility_adu_q_02", "neo_hostility_adu_q_10", "neo_hostility_adu_q_18", "neo_hostility_adu_q_26", "neo_hostility_adu_q_34",
+                         "neo_hostility_adu_q_42", "neo_hostility_adu_q_50", "neo_hostility_adu_q_58", "neo_depression_adu_q_66", "neo_depression_adu_q_71",
+                         "neo_depression_adu_q_77","neo_depression_adu_q_80","neo_depression_adu_q_85", "neo_depression_adu_q_89", "neo_depression_adu_q_93",
+                         "neo_depression_adu_q_97", "neo_selfconsciousness_adu_q_03", "neo_selfconsciousness_adu_q_11", "neo_selfconsciousness_adu_q_19",
+                         "neo_selfconsciousness_adu_q_27", "neo_selfconsciousness_adu_q_35", "neo_selfconsciousness_adu_q_43", "neo_selfconsciousness_adu_q_51",
+                         "neo_selfconsciousness_adu_q_59", "neo_impulsiveness_adu_q_04", "neo_impulsiveness_adu_q_12", "neo_impulsiveness_adu_q_20",
+                         "neo_impulsiveness_adu_q_28", "neo_impulsiveness_adu_q_36", "neo_impulsiveness_adu_q_44", "neo_impulsiveness_adu_q_52",
+                         "neo_impulsiveness_adu_q_60", "neo_vulnerability_adu_q_07", "neo_vulnerability_adu_q_15", "neo_vulnerability_adu_q_23", "neo_vulnerability_adu_q_31",
+                         "neo_vulnerability_adu_q_39", "neo_vulnerability_adu_q_47", "neo_vulnerability_adu_q_55", "neo_vulnerability_adu_q_63")]
+
+
+LL_1aq2_neo <- LL_1aq2_neo %>% rename("VARIANT_ID_1aq2_neo" ="VARIANT_ID", "neo_anx_worrier_1a" = "neo_anxiety_adu_q_65", "neo_anx_afraid_1a" = "neo_anxiety_adu_q_68","neo_anx_anxious_1a" = "neo_anxiety_adu_q_74",
+                              "neo_anx_future_1a" = "neo_anxiety_adu_q_83", "neo_anx_gowrong_1a" = "neo_anxiety_adu_q_88", "neo_anx_fears_1a" = "neo_anxiety_adu_q_92", "neo_anx_thoughts_1a" = "neo_anxiety_adu_q_96", "neo_anx_tense_1a" = "neo_tense_adu_q_79",
+                              "neo_hos_angry_1a" = "neo_hostility_adu_q_02", "neo_hos_steady_1a" = "neo_hostility_adu_q_10", "neo_hos_shtempered_1a" = "neo_hostility_adu_q_18", "neo_hos_notirritable_1a" = "neo_hostility_adu_q_26", "neo_hos_loathe_1a" = "neo_hostility_adu_q_34",
+                              "neo_hos_notquickanger_1a" = "neo_hostility_adu_q_42", "neo_hos_bitter_1a" = "neo_hostility_adu_q_50", "neo_hos_easilyfrus_1a" = "neo_hostility_adu_q_58", "neo_dep.rarelylonely_1a" =  "neo_depression_adu_q_66", "neo_dep.worthless_1a" = "neo_depression_adu_q_71",
+                              "neo_dep.rarelysad_1a" = "neo_depression_adu_q_77","neo_dep.guilt_1a" = "neo_depression_adu_q_80", "neo_dep.blame_1a" = "neo_depression_adu_q_85", "neo_dep.lowopinion_1a" = "neo_depression_adu_q_89", "neo_dep.hopeless_1a" = "neo_depression_adu_q_93",
+                              "neo_dep.discouraged_1a" = "neo_depression_adu_q_97", "neo_selfcon_fool_1a" = "neo_selfconsciousness_adu_q_03", "neo_selfcon_shy_1a" = "neo_selfconsciousness_adu_q_11", "neo_selfcon_ashamed_1a" = "neo_selfconsciousness_adu_q_19",
+                              "neo_selfcon_notshy_1a" = "neo_selfconsciousness_adu_q_27", "neo_selfcon_inferiority_1a" = "neo_selfconsciousness_adu_q_35", "neo_selfcon_ease_1a" = "neo_selfconsciousness_adu_q_43", "neo_selfcon_avoidance_1a" = "neo_selfconsciousness_adu_q_51",
+                              "neo_selfcon_easilyembarrased_1a" = "neo_selfconsciousness_adu_q_59", "neo_imp_excess_1a" = "neo_impulsiveness_adu_q_04", "neo_imp_resistdesires_1a" = "neo_impulsiveness_adu_q_12", "neo_imp_resisttemp_1a" = "neo_impulsiveness_adu_q_20",
+                              "neo_imp_overinduldge_1a" = "neo_impulsiveness_adu_q_28", "neo_imp_resistimpulses_1a" = "neo_impulsiveness_adu_q_36", "neo_imp_overeat_1a" = "neo_impulsiveness_adu_q_44", "neo_imp_impulsive_1a" = "neo_impulsiveness_adu_q_52",
+                              "neo_imp_controlled_1a" = "neo_impulsiveness_adu_q_60", "neo_vul_helpless_1a" = "neo_vulnerability_adu_q_07", "neo_vul_independent_1a" = "neo_vulnerability_adu_q_15", "neo_vul_stress_1a" = "neo_vulnerability_adu_q_23", "neo_vul_even_tempered_1a" = "neo_vulnerability_adu_q_31",
+                              "neo_vul_indecisive_1a" = "neo_vulnerability_adu_q_39", "neo_vul_composed_1a" = "neo_vulnerability_adu_q_47", "neo_vul_rightdecisions_1a" = "neo_vulnerability_adu_q_55", "neo_vul_emotionallystable_1a" = "neo_vulnerability_adu_q_63")
+
+#MERGE
+LL_hor_pan = merge(LL_1aq2_hor, LL_1aq2_pan, by="PROJECT_PSEUDO_ID")
+LL_1aq2 = merge (LL_hor_pan, LL_1aq2_neo, by="PROJECT_PSEUDO_ID")
+dim(LL_1aq2)
+
+str(LL_1aq2)
+
+write.csv(LL_1aq2, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets/05.05.2021_LL1aq2.csv")
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets
+
+
+        ## =============== 2. LL_1a VISIT VARIABLES   ================ ## ## 
+
+LL_1av1 <-  read.csv("1a_v_1_results.csv", header=T, as.is=T, sep=",")
+dim(LL_1av1)
+#1026301     653
+
+LL_1av1 <- LL_1av1 [ , c("PROJECT_PSEUDO_ID", "VARIANT_ID", "miniv1_mddyear_adu_c_1",
+                                               "miniv1_dysyear_adu_c_1",
+                                               "miniv1_gadyear_adu_c_1",
+                                               "miniv1_agphyear_adu_c_1",
+                                               "miniv1_sphyear_adu_c_1",
+                                               "miniv1_anydepyear_adu_c_1",
+                                               "miniv1_anyanxyear_adu_c_1",
+                                               "miniv1_anyippyear_adu_c_1",
+                                               "mini_mdd_adu_c_1",
+                                               "mini_dys_adu_c_1",
+                                               "mini_gad_adu_c_1",
+                                               "mini_pd_adu_c_1",
+                                               "mini_agph_adu_c_1",
+                                               "mini_sph_adu_c_1",
+                                               "mini_anydep_adu_c_1",
+                                               "mini_anyanx_adu_c_1",
+                                               "mini_anyipp_adu_c_1",
+                                               "mini_a_adu_q_1",
+                                               "mini_a_adu_q_2",
+                                               "mini_a_adu_q_3_a",
+                                               "mini_a_adu_q_3_b",
+                                               "mini_a_adu_q_3_c",
+                                               "mini_a_adu_q_3_d",
+                                               "mini_a_adu_q_3_e",
+                                               "mini_a_adu_q_3_f",
+                                               "mini_a_adu_q_3_g",
+                                               "mini_a_adu_q_5_a",
+                                               "mini_a_adu_q_5_b",
+                                               "mini_o_adu_q_1_a",
+                                               "mini_o_adu_q_1_b",
+                                               "mini_o_adu_q_2",
+                                               "mini_o_adu_q_3_a",
+                                               "mini_o_adu_q_3_b",
+                                               "mini_o_adu_q_3_c",
+                                               "mini_o_adu_q_3_d",
+                                               "mini_o_adu_q_3_e",
+                                               "mini_o_adu_q_3_f")]
+unique(LL_1av1$VARIANT_ID)
+
+LL_1av1_MINI_derv <- LL_1av1[grep("^1a_v_1_mini", LL_1av1$VARIANT_ID), 
+                             c("PROJECT_PSEUDO_ID", "VARIANT_ID", "miniv1_mddyear_adu_c_1",
+                               "miniv1_dysyear_adu_c_1",
+                               "miniv1_gadyear_adu_c_1",
+                               "miniv1_agphyear_adu_c_1",
+                               "miniv1_sphyear_adu_c_1",
+                               "miniv1_anydepyear_adu_c_1",
+                               "miniv1_anyanxyear_adu_c_1",
+                               "miniv1_anyippyear_adu_c_1",
+                               "mini_mdd_adu_c_1",
+                               "mini_dys_adu_c_1",
+                               "mini_gad_adu_c_1",
+                               "mini_pd_adu_c_1",
+                               "mini_agph_adu_c_1",
+                               "mini_sph_adu_c_1",
+                               "mini_anydep_adu_c_1",
+                               "mini_anyanx_adu_c_1",
+                               "mini_anyipp_adu_c_1",
+                               "mini_a_adu_q_1",
+                               "mini_a_adu_q_2",
+                               "mini_a_adu_q_3_a",
+                               "mini_a_adu_q_3_b",
+                               "mini_a_adu_q_3_c",
+                               "mini_a_adu_q_3_d",
+                               "mini_a_adu_q_3_e",
+                               "mini_a_adu_q_3_f",
+                               "mini_a_adu_q_3_g",
+                               "mini_a_adu_q_5_a",
+                               "mini_a_adu_q_5_b",
+                               "mini_o_adu_q_1_a",
+                               "mini_o_adu_q_1_b",
+                               "mini_o_adu_q_2",
+                               "mini_o_adu_q_3_a",
+                               "mini_o_adu_q_3_b",
+                               "mini_o_adu_q_3_c",
+                               "mini_o_adu_q_3_d",
+                               "mini_o_adu_q_3_e",
+                               "mini_o_adu_q_3_f")]
+
+dim(LL_1av1_MINI_derv)
+#148965     39
+
+LL_1av1 <- LL_1av1_MINI_derv %>% rename("VARIANT_ID_1av1_mini" ="VARIANT_ID", "miniv1_mddyear_1a" = "miniv1_mddyear_adu_c_1",
+                              "miniv1_dysyear_1a" = "miniv1_dysyear_adu_c_1",
+                              "miniv1_gadyear_1a" = "miniv1_gadyear_adu_c_1",
+                              "miniv1_agphyear_1a" = "miniv1_agphyear_adu_c_1",
+                              "miniv1_sphyear_1a" = "miniv1_sphyear_adu_c_1",
+                              "miniv1_anydepyear_1a" = "miniv1_anydepyear_adu_c_1",
+                              "miniv1_anyanxyear_1a" = "miniv1_anyanxyear_adu_c_1",
+                              "miniv1_anyippyear_1a" = "miniv1_anyippyear_adu_c_1",
+                              "mini_mdd_1a" = "mini_mdd_adu_c_1",
+                              "mini_dys_1a" = "mini_dys_adu_c_1",
+                              "mini_gad_1a" = "mini_gad_adu_c_1",
+                              "mini_pd_1a" = "mini_pd_adu_c_1",
+                              "mini_agph_1a" = "mini_agph_adu_c_1",
+                              "mini_sph_1a" = "mini_sph_adu_c_1",
+                              "mini_anydep_1a" = "mini_anydep_adu_c_1",
+                              "mini_anyanx_1a" = "mini_anyanx_adu_c_1",
+                              "mini_anyipp_1a" = "mini_anyipp_adu_c_1",
+                              "mini_mdd_sym_c1_1a" = "mini_a_adu_q_1",
+                              "mini_mdd_sym_c2_1a" = "mini_a_adu_q_2",
+                              "mini_mdd_sym_c3_1a" = "mini_a_adu_q_3_a",
+                              "mini_mdd_sym_c4_1a" = "mini_a_adu_q_3_b",
+                              "mini_mdd_sym_c5_1a" = "mini_a_adu_q_3_c",
+                              "mini_mdd_sym_c6_1a" = "mini_a_adu_q_3_d",
+                              "mini_mdd_sym_c7_1a" = "mini_a_adu_q_3_e",
+                              "mini_mdd_sym_c8_1a" = "mini_a_adu_q_3_f",
+                              "mini_mdd_sym_c9_1a" = "mini_a_adu_q_3_g",
+                              "mini_mdd_rec_1a" = "mini_a_adu_q_5_a",
+                              "mini_mdd_valid_1a" = "mini_a_adu_q_5_b",
+                              "mini_gad_sym_c1a_1a" = "mini_o_adu_q_1_a",
+                              "mini_gad_sym_c1b_1a" = "mini_o_adu_q_1_b",
+                              "mini_gad_sym_c1c_1a" = "mini_o_adu_q_2",
+                              "mini_gad_sym_c2_1a" = "mini_o_adu_q_3_a",
+                              "mini_gad_sym_c3_1a" = "mini_o_adu_q_3_b",
+                              "mini_gad_sym_c4_1a" = "mini_o_adu_q_3_c",
+                              "mini_gad_sym_c5_1a" = "mini_o_adu_q_3_d",
+                              "mini_gad_sym_c6_1a" = "mini_o_adu_q_3_e",
+                              "mini_gad_sym_c7_1a" = "mini_o_adu_q_3_f")
+str(LL_1av1)
+
+
+write.csv(LL_1av1, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets/05.05.2021_LL1av1.csv")
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets
+
+        ## =============== 3. LL_2a QUESTIONNAIRE VARIABLES   ================ ##
+
+LL_2aq1 <-  read.csv("2a_q_1_results.csv", header=T, as.is=T, sep=",")
+dim(LL_2aq1)
+#101385    735
+
+#SUBSETS
+
+        #employment
+LL_2aq1_emp <- LL_2aq1 [ , c("VARIANT_ID", "PROJECT_PSEUDO_ID", "employment_situation_adu_q_1_g")]
+
+LL_2aq1_emp <- LL_2aq1_emp %>% rename("VARIANT_ID_2aq1_emp" ="VARIANT_ID", "employment_situation_2a" = "employment_situation_adu_q_1_g")
+
+        #education
+LL_2aq1_edu <- LL_2aq1 [ , c("VARIANT_ID", "PROJECT_PSEUDO_ID", "educational_attainment_adu_c_1")]
+
+LL_2aq1_edu <- LL_2aq1_edu %>% rename("VARIANT_ID_2aq1_edu" ="VARIANT_ID", "educational_attainment_2a" = "educational_attainment_adu_c_1")
+
+        #addiction
+LL_2aq1_add <- LL_2aq1 [ , c("VARIANT_ID", "PROJECT_PSEUDO_ID", "addiction_followup_adu_q_1")]
+
+LL_2aq1_add <- LL_2aq1_add %>% rename("VARIANT_ID_2aq1_add" ="VARIANT_ID", "addiction_followup_2a" = "addiction_followup_adu_q_1")
+
+#MERGE
+LL_emp_edu = merge(LL_2aq1_emp, LL_2aq1_edu, by="PROJECT_PSEUDO_ID")
+LL_2aq1 = merge (LL_emp_edu, LL_2aq1_add, by="PROJECT_PSEUDO_ID")
+
+str(LL_2aq1)
+
+write.csv(LL_2aq1, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets/05.05.2021_LL2aq1.csv")
+
+LL_2aq2 <-  read.csv("2a_q_2_results.csv", header=T, as.is=T, sep=",")
+dim(LL_2aq2)
+#89830   320
+
+LL_2aq2 <- LL_2aq2 [ , c("PROJECT_PSEUDO_ID", "VARIANT_ID", "eq5d_mobility_adu_q_01", "eq5d_selfcare_adu_q_02",
+                         "eq5d_activity_adu_q_03", "eq5d_pain_adu_q_04", "eq5d_mood_adu_q_05", "eq5d_rate_adu_q_06")]
+
+
+LL_2aq2 <- LL_2aq2 %>% rename("VARIANT_ID_2aq1_eq5d" ="VARIANT_ID", "eq5d_mobility_2a" = "eq5d_mobility_adu_q_01", "eq5d_selfcare_2a" = "eq5d_selfcare_adu_q_02",
+                              "eq5d_activity_2a" = "eq5d_activity_adu_q_03", "eq5d_pain_2a" = "eq5d_pain_adu_q_04", "eq5d_mood_2a" = "eq5d_mood_adu_q_05", "eq5d_rate_2a" = "eq5d_rate_adu_q_06")
+str(LL_2aq2)
+
+write.csv(LL_2aq2, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets/05.05.2021_LL2aq2.csv")
+
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets
+
+        ## =============== 4. LL_2b QUESTIONNAIRE VARIABLES   ================ ##
+
+LL_2qb1 <-  read.csv("2b_q_1_results.csv", header=T, as.is=T, sep=",")
+dim(LL_2qb1)
+#64279   493
+
+#SUBSETS
+        #employment
+LL_2qb1_emp <- LL_2qb1 [ , c("PROJECT_PSEUDO_ID", "VARIANT_ID", "employment_situation_adu_q_1_g")]
+
+
+LL_2qb1_emp <- LL_2qb1_emp %>% rename("VARIANT_ID_2qb1_emp" ="VARIANT_ID", "employment_situation_2b" = "employment_situation_adu_q_1_g")
+
+
+        #PANAS
+LL_2qb1_pan <- LL_2qb1 [ , c("PROJECT_PSEUDO_ID", "VARIANT_ID", "panas_hostile_adu_q_08", "panas_ashamed_adu_q_13",
+                         "panas_upset_adu_q_04", "panas_scared_adu_q_07", "panas_nervous_adu_q_15", "panas_attentive_adu_q_17",
+                         "panas_active_adu_q_19", "panas_alert_adu_q_12", "panas_determined_adu_q_16", "panas_inspired_adu_q_14")]
+
+
+LL_2qb1_pan <- LL_2qb1_pan %>% rename("VARIANT_ID_2qb1_pan" ="VARIANT_ID", "panas_hostile_2b" = "panas_hostile_adu_q_08", "panas_ashamed_2b" = "panas_ashamed_adu_q_13",
+                              "panas_upset_2b" = "panas_upset_adu_q_04", "panas_scared_2b" = "panas_scared_adu_q_07", "panas_nervous_2b" = "panas_nervous_adu_q_15", "panas_attentive_2b" = "panas_attentive_adu_q_17",
+                              "panas_active_2b" = "panas_active_adu_q_19", "panas_alert_2b" = "panas_alert_adu_q_12", "panas_determined_2b" = "panas_determined_adu_q_16", "panas_inspired_2b" = "panas_inspired_adu_q_14")
+
+#MERGE
+LL_2qb1 = merge(LL_2qb1_emp, LL_2qb1_pan, by="PROJECT_PSEUDO_ID")
+
+
+write.csv(LL_2qb1, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets/05.05.2021_LL2qb1.csv")
+
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets
+
+        ## =============== 5. LL_2a VISIT VARIABLES   ================ ## ## 
+
+LL_2av1 <-  read.csv("2a_v_1_results.csv", header=T, as.is=T, sep=",")
+dim(LL_2av1)
+# 607851    566
+
+LL_2av1 <- LL_2av1 [ , c("PROJECT_PSEUDO_ID", "VARIANT_ID", "mini_mdd_adu_c_1",
+                                               "mini_dys_adu_c_1",
+                                               "mini_gad_adu_c_1",
+                                               "mini_pd_adu_c_1",
+                                               "mini_agph_adu_c_1",
+                                               "mini_sph_adu_c_1",
+                                               "mini_anydep_adu_c_1",
+                                               "mini_anyanx_adu_c_1",
+                                               "mini_anyipp_adu_c_1",
+                                               "mini_a_adu_q_1",
+                                               "mini_a_adu_q_2",
+                                               "mini_a_adu_q_3_a1",
+                                               "mini_a_adu_q_3_a2",
+                                               "mini_a_adu_q_3_a3",
+                                               "mini_a_adu_q_3_b",
+                                               "mini_a_adu_q_3_c1",
+                                               "mini_a_adu_q_3_c1a",
+                                               "mini_a_adu_q_3_c2",
+                                               "mini_a_adu_q_3_c2a",
+                                               "mini_a_adu_q_3_d",
+                                               "mini_a_adu_q_3_e",
+                                               "mini_a_adu_q_3_f",
+                                               "mini_a_adu_q_3_g",
+                                               "mini_a_adu_q_5_a",
+                                               "mini_a_adu_q_5_b",
+                                               "mini_o_adu_q_1_a",
+                                               "mini_o_adu_q_1_b",
+                                               "mini_o_adu_q_2",
+                                               "mini_o_adu_q_3_a",
+                                               "mini_o_adu_q_3_b",
+                                               "mini_o_adu_q_3_c",
+                                               "mini_o_adu_q_3_d",
+                                               "mini_o_adu_q_3_e",
+                                               "mini_o_adu_q_3_f")]
+unique(LL_2av1$VARIANT_ID)
+
+LL_2av1_MINI_derv <- LL_2av1[grep("^2a_v_1_mini", LL_2av1$VARIANT_ID), 
+                             c("PROJECT_PSEUDO_ID", "VARIANT_ID", "mini_mdd_adu_c_1",
+                               "mini_dys_adu_c_1",
+                               "mini_gad_adu_c_1",
+                               "mini_pd_adu_c_1",
+                               "mini_agph_adu_c_1",
+                               "mini_sph_adu_c_1",
+                               "mini_anydep_adu_c_1",
+                               "mini_anyanx_adu_c_1",
+                               "mini_anyipp_adu_c_1",
+                               "mini_a_adu_q_1",
+                               "mini_a_adu_q_2",
+                               "mini_a_adu_q_3_a1",
+                               "mini_a_adu_q_3_a2",
+                               "mini_a_adu_q_3_a3",
+                               "mini_a_adu_q_3_b",
+                               "mini_a_adu_q_3_c1",
+                               "mini_a_adu_q_3_c1a",
+                               "mini_a_adu_q_3_c2",
+                               "mini_a_adu_q_3_c2a",
+                               "mini_a_adu_q_3_d",
+                               "mini_a_adu_q_3_e",
+                               "mini_a_adu_q_3_f",
+                               "mini_a_adu_q_3_g",
+                               "mini_a_adu_q_5_a",
+                               "mini_a_adu_q_5_b",
+                               "mini_o_adu_q_1_a",
+                               "mini_o_adu_q_1_b",
+                               "mini_o_adu_q_2",
+                               "mini_o_adu_q_3_a",
+                               "mini_o_adu_q_3_b",
+                               "mini_o_adu_q_3_c",
+                               "mini_o_adu_q_3_d",
+                               "mini_o_adu_q_3_e",
+                               "mini_o_adu_q_3_f")]
+
+dim(LL_2av1_MINI_derv)
+#101751     36
+
+
+LL_2av1 <- LL_2av1_MINI_derv %>% rename("VARIANT_ID_2av1_mini" ="VARIANT_ID", "mini_mdd_2a" = "mini_mdd_adu_c_1",
+                              "mini_dys_2a" = "mini_dys_adu_c_1",
+                              "mini_gad_2a" = "mini_gad_adu_c_1",
+                              "mini_pd_2a" = "mini_pd_adu_c_1",
+                              "mini_agph_2a" = "mini_agph_adu_c_1",
+                              "mini_sph_2a" = "mini_sph_adu_c_1",
+                              "mini_anydep_2a" = "mini_anydep_adu_c_1",
+                              "mini_anyanx_2a" = "mini_anyanx_adu_c_1",
+                              "mini_anyipp_2a" = "mini_anyipp_adu_c_1",
+                              "mini_mdd_sym_c1_2a" = "mini_a_adu_q_1",
+                              "mini_mdd_sym_c2_2a" = "mini_a_adu_q_2",
+                              "mini_mdd_sym_c3a_2a" = "mini_a_adu_q_3_a1",
+                              "mini_mdd_sym_c3b_2a" = "mini_a_adu_q_3_a2",
+                              "mini_mdd_sym_c3c_2a" = "mini_a_adu_q_3_a3",
+                              "mini_mdd_sym_c4_2a" = "mini_a_adu_q_3_b",
+                              "mini_mdd_sym_c5a_2a" = "mini_a_adu_q_3_c1",
+                              "mini_mdd_sym_c5b_2a" = "mini_a_adu_q_3_c1a",
+                              "mini_mdd_sym_c5c_2a" = "mini_a_adu_q_3_c2",
+                              "mini_mdd_sym_c5d_2a" = "mini_a_adu_q_3_c2a",
+                              "mini_mdd_sym_c6_2a" = "mini_a_adu_q_3_d",
+                              "mini_mdd_sym_c7_2a" = "mini_a_adu_q_3_e",
+                              "mini_mdd_sym_c8_2a" = "mini_a_adu_q_3_f",
+                              "mini_mdd_sym_c9_2a" = "mini_a_adu_q_3_g",
+                              "mini_mdd_rec_2a" = "mini_a_adu_q_5_a",
+                              "mini_mdd_valid_2a" = "mini_a_adu_q_5_b",
+                              "mini_gad_sym_c1a_2a" = "mini_o_adu_q_1_a",
+                              "mini_gad_sym_c1b_2a" = "mini_o_adu_q_1_b",
+                              "mini_gad_sym_c1c_2a" = "mini_o_adu_q_2",
+                              "mini_gad_sym_c2_2a" = "mini_o_adu_q_3_a",
+                              "mini_gad_sym_c3_2a" = "mini_o_adu_q_3_b",
+                              "mini_gad_sym_c4_2a" = "mini_o_adu_q_3_c",
+                              "mini_gad_sym_c5_2a" = "mini_o_adu_q_3_d",
+                              "mini_gad_sym_c6_2a" = "mini_o_adu_q_3_e",
+                              "mini_gad_sym_c7_2a" = "mini_o_adu_q_3_f")
+
+str(LL_2av1)
+write.csv(LL_2av1, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets/05.05.2021_LL2av1.csv")
+
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets
+
+        ## =============== 6. BIONIC data   ================ ##
+
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/BIONIC2
+#NOTE!!! PERMISSION TO USE FILE IS REQUIRED FROM DR HANNA V. LOO
+
+BIONIC <- read.csv("BIONIC2_20210416.txt", header=T, as.is=T, sep="\t")
+dim(BIONIC)
+#32035   172
+
+        ## =============== 7. MERGING DATASETS  ================ ##
+
+
+#Lifelines wave 1
+dim(LL_1aq1)
+#151113      9
+
+dim(LL_1aq2)
+#143601     73
+
+LL_1aq <- full_join(LL_1aq1, LL_1aq2, by="PROJECT_PSEUDO_ID") 
+dim(LL_1aq)
+#152274     81
+
+dim(LL_1av1)
+#148965     39
+
+LL_1a <- full_join(LL_1aq, LL_1av1, by="PROJECT_PSEUDO_ID")  
+dim(LL_1a)
+#152799    119
+
+write.csv(LL_1a, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets/10.05.2021_LL_wave1a.csv")
+
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets
+
+
+#LL_2av1 = subset(LL_2av1, select = -X)
+
+#Lifelines wave 2
+dim(LL_2aq1)
+#101385      7
+
+dim(LL_2aq2)
+#89830     8
+
+LL_2aq <- full_join(LL_2aq1, LL_2aq2, by="PROJECT_PSEUDO_ID") 
+dim(LL_2aq)
+#108386     14
+
+dim(LL_2qb1)
+#64279    14
+
+LL_2abq <- full_join(LL_2aq, LL_2qb1, by="PROJECT_PSEUDO_ID") 
+dim(LL_2abq)
+#109865     27
+
+dim(LL_2av1)
+#101751     36
+
+LL_2 <- full_join(LL_2abq, LL_2av1, by="PROJECT_PSEUDO_ID") 
+#113820     62
+
+write.csv(LL_2, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets/10.05.2021_LL_wave2.csv")
+#/groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets
+
+#Lifelines
+LL <- full_join (LL_1a, LL_2, by="PROJECT_PSEUDO_ID")
+dim(LL)
+#154267    180
+
+write.csv(LL, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets/10.05.2021_Lifelines.csv")
+#/groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/Lifelines_subsets
+
+LL_DAG3_pheno <- full_join (LL, DAG3_pheno, by="PROJECT_PSEUDO_ID")
+dim(LL_DAG3_pheno)
+# 154780    261
+
+write.csv(LL_DAG3_pheno, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/WorkingDirectory/10.05.2021_LL_DAG3_pheno.csv")
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile
+
+Masterfile = left_join(LL_DAG3_pheno, BIONIC, by = "PSEUDOIDEXT")
+dim(Masterfile)
+#154780    432
+write.csv(Masterfile, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/WorkingDirectory/10.05.2021_Masterfile.csv")
+#updated loaction: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile
