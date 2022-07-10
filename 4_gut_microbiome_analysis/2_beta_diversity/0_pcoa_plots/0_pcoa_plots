@@ -1,0 +1,284 @@
+#start interactive session on the cluster:  srun --cpus-per-task=1 --mem=14gb --nodes=1 --qos=interactive --time=04:00:00 --pty bash -i
+#load R module:                             ml RPlus
+#start R (R version 4.0.3 (2020-10-10):     R
+
+###     SCRIPT: DISEASE CONTROLS: BETA DIVERSITY WITH MENTAL HEALTH AND TREATMENT
+###     AUTHOR(S): SIOBHAN BRUSHETT AND ALEX 
+###     DESCRIPTION: BETA DIVERSITY ANALYSIS OF SPP WITH MENTAL HEALTH AND TREATMENT INCL. PLOTS
+###     PROJECT: PSYCH-MICROBIOME
+###     NOTE(S): METAPHLAN3 DATA; BASED ON ALEX'S WORKSHOP SCRIPT AND INC. ALEX'S RA COLOUR GRADIENT SCRIPT
+###              THIS IS AN UPDATE WHERE ENVFIT COORODINATES ARE PLOTTED ON ONE PCOA PLOT AS OPPOSED TO MULTIPLE
+###              14.02.2022: FURTHER UPDATED TO RUN ONLY ONE PCOA WITH DIFFERENT ENVFIT ARROWS
+
+#Resources: 
+#vegan vignette: https://cran.r-project.org/web/packages/vegan/vignettes/intro-vegan.pdf
+#https://www.r-graph-gallery.com/119-add-a-legend-to-a-plot.html
+#https://r-coder.com/plot-r/#Add_text_to_plot_in_R
+#https://websites.pmc.ucsc.edu/~mclapham/Rtips/ordination.htm (from Arnau)
+
+##Contents of this file
+
+## 0. LOAD DATA
+## 1. PHENOTYPE SUBSET AND FORMAT METAPHLAN DATA
+## 2. PCOA and ENVFIT
+## 3. BETA DIVERSITY PLOT
+
+library(tidyverse)
+library(vegan) #version 2.5-7
+library(scales)   
+#library(ape) #pcoa
+#library(ggplot2)
+
+                ## =============== 0. LOAD DATA   ================ ##
+
+phenotypes = read.csv("27.08.2021_transformed_phenotypes_control.csv", header=T, as.is=T, sep=",", row.names = 1)
+dim(phenotypes)
+# 7656  236
+
+metaphlan = read.delim("MetaPhlan3_subset.txt", header=T, as.is=T, sep="\t", row.names = 1)
+dim(metaphlan)
+#7656 1764
+
+                ## =============== 1. PHENOTYPE SUBSET AND FORMAT METAPHLAN DATA   ================ ##
+
+#create subset of phenotype data 
+sub_phenotypes <- phenotypes[ , c( "ANTHRO.AGE",
+                                   "ANTHRO.Sex",
+                                   "ANTHRO.BMI",
+                                   "MDD_control", 
+                                   "DYS_control", 
+                                   "AnyDep_control", 
+                                   "LTMDDonly_control",
+                                   "GAD_control", 
+                                   "AnyAnx_control",
+                                   "LTGADonly_control",
+                                   #"NEO.Neuroticism_Complete_1a_tran",
+                                   #"PANAS.Negative_Affect_2b_tran",
+                                   "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                   "CURRENT_TREATMENT.Mental_Health")]
+
+#recode phenotypes for plots
+sub_phenotypes$ANTHRO.Sex <- recode_factor(sub_phenotypes$ANTHRO.Sex, 
+                                                                F = 0,
+                                                                M = 1)
+
+sub_phenotypes$MDD_control <- recode_factor(sub_phenotypes$MDD_control, 
+                                            control = 0,
+                                            current_MDD = 1)
+
+sub_phenotypes$DYS_control <- recode_factor(sub_phenotypes$DYS_control, 
+                                            control = 0,
+                                            current_DYS = 1)
+
+sub_phenotypes$AnyDep_control <- recode_factor(sub_phenotypes$AnyDep_control,
+                                               control = 0,
+                                               any_current_dep = 1)
+
+sub_phenotypes$LTMDDonly_control <- recode_factor(sub_phenotypes$LTMDDonly_control, 
+                                                  control = 0,
+                                                  lifetime_MDD_only = 1)
+
+sub_phenotypes$GAD_control <- recode_factor(sub_phenotypes$GAD_control, 
+                                            control = 0,
+                                            current_GAD = 1)
+
+sub_phenotypes$AnyAnx_control <- recode_factor(sub_phenotypes$AnyAnx_control, 
+                                               control = 0,
+                                               any_current_anx = 1)
+
+sub_phenotypes$LTGADonly_control <- recode_factor(sub_phenotypes$LTGADonly_control, 
+                                                  control = 0,
+                                                  lifetime_GAD_only = 1)
+
+sub_phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB <- recode_factor(sub_phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB, 
+                                                                                          N = 0,
+                                                                                          Y = 1)
+
+sub_phenotypes$CURRENT_TREATMENT.Mental_Health <- recode_factor(sub_phenotypes$CURRENT_TREATMENT.Mental_Health, 
+                                                                N = 0,
+                                                                Y = 1)
+
+#make phenos numeric
+num <- c(1:12) 
+for (i in num) {
+        sub_phenotypes[,i] <- as.numeric(as.character(sub_phenotypes[,i]))
+        print(table(sub_phenotypes[,i]))
+}
+
+
+sub_phenotypes <- sub_phenotypes %>% rename ("Age" = "ANTHRO.AGE",
+                                             "Sex" = "ANTHRO.Sex",
+                                             "BMI" = "ANTHRO.BMI",
+                                             "DYS" = "DYS_control",
+                                             "MDD" = "MDD_control",
+                                             "Depression" = "AnyDep_control",
+                                             "LTMDD" = "LTMDDonly_control",
+                                             "GAD" = "GAD_control",
+                                             "Anxiety" = "AnyAnx_control",
+                                             "LTGAD" = "LTGADonly_control",
+                                             "SSRIs" = "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                             "PTDs" = "CURRENT_TREATMENT.Mental_Health")
+                                             #"Neuroticism" = "NEO.Neuroticism_Complete_1a_tran",
+                                             #"NegAff" = "PANAS.Negative_Affect_2b_tran")
+
+#subset metaphlan data to spp data only
+metaphlan_spp <- metaphlan[, grep(".s__", colnames(metaphlan))]  
+dim(metaphlan_spp)
+#7656 1117
+
+#DO NOT READJUST OTHERWISE WE REMOVE THE EFFECTS OF THE 'UNKNOWN' COLUMN
+#re-adjust relative abundance based on spp by dividing the RA of each bacterium of each participant, by the total RA of the participant
+#metaphlan_relab <-t(apply(metaphlan_spp, 1, function(x) x/sum(x)))
+
+        ## =============== 2. PCOA and ENVFIT   ================ ##
+
+#pcoa
+pcoa <- capscale(metaphlan_spp ~ 1, distance="bray") 
+
+#proportion of variance explained per PCoA
+(pcoa$CA$eig[1]/sum(pcoa$CA$eig)) * 100
+#MDS1: 9.827983
+(pcoa$CA$eig[2]/sum(pcoa$CA$eig)) * 100
+#MDS2: 7.117323 
+(pcoa$CA$eig[3]/sum(pcoa$CA$eig)) * 100
+#MDS3: 6.801602
+
+which.min(pcoa$CA$v[,1])
+#s__Bacteroides_uniformis
+which.max(pcoa$CA$v[,1])
+#s__Prevotella_copri
+
+#envfit
+#a. intrinsic factors, internalizing disorders and psychotropic drugs
+
+envfit_age <- envfit(pcoa ~ sub_phenotypes$Age, na.rm =T)
+
+envfit_sex <- envfit(pcoa ~ sub_phenotypes$Sex, na.rm =T)
+
+envfit_bmi <- envfit(pcoa ~ sub_phenotypes$BMI, na.rm =T)
+
+envfit_dep <- envfit(pcoa ~ sub_phenotypes$Depression, na.rm =T)
+
+envfit_mdd <- envfit(pcoa ~ sub_phenotypes$MDD, na.rm=T)
+
+envfit_dys <- envfit(pcoa ~ sub_phenotypes$DYS, na.rm=T)
+
+envfit_ltmdd <- envfit(pcoa ~ sub_phenotypes$LTMDD, na.rm=T)
+
+envfit_anx <- envfit(pcoa ~ sub_phenotypes$Anxiety, na.rm =T)
+
+envfit_gad <- envfit(pcoa ~ sub_phenotypes$GAD, na.rm =T)
+
+envfit_ltgad <- envfit(pcoa ~ sub_phenotypes$LTGAD, na.rm =T)
+
+envfit_sri <- envfit(pcoa ~ sub_phenotypes$SSRIs, na.rm=T)
+
+envfit_ptd_all <- envfit(pcoa ~ sub_phenotypes$PTDs, na.rm =T) 
+
+#b. internalizing traits/states
+#NEO.Neuroticism_Complete_1a_tran (transformed)
+#envfit_neuro <- envfit(pcoa ~ sub_phenotypes$Neuroticism, na.rm=T)
+
+#PANAS.Negative_Affect_2b_tran (transformed)
+#envfit_neg <- envfit(pcoa ~ sub_phenotypes$NegAff, na.rm=T)
+
+#check which species are driving PCOA1 (https://rdrr.io/cran/vegan/man/scores.html)
+scores(pcoa, choices=1, display="species")
+
+                ## =============== 3. BETA DIVERSITY PLOT  ================ ##
+
+#Alex's RA colour gradient function
+make_color_vector = function(data_vector, colors = c("#FF9190","#120C6E"),Ncolors = 20) {
+        colfunc = colorRampPalette(colors)
+        colors = colfunc(Ncolors)
+        values_range = max(data_vector) - min(data_vector)
+        values_step = values_range / Ncolors
+        breaks = c()
+        current_step = min(data_vector)
+        for(i in 1:(Ncolors-1)){
+                current_step = current_step + values_step
+                breaks = c(breaks,current_step)
+        }
+        value_factorized = cut(data_vector,breaks = c(-Inf,breaks,Inf))
+        levels(value_factorized) = colors
+        as.character(value_factorized)
+}
+
+
+#value == abundance of P.copri
+#value = log(metaphlan_spp[,"k__Bacteria|p__Bacteroidetes|c__Bacteroidia|o__Bacteroidales|f__Prevotellaceae|g__Prevotella|s__Prevotella_copri"],10)
+value = metaphlan_spp[,"k__Bacteria|p__Bacteroidetes|c__Bacteroidia|o__Bacteroidales|f__Prevotellaceae|g__Prevotella|s__Prevotella_copri"]
+cols = make_color_vector(value)
+
+#for legend
+range(value)
+#0.00000 79.47959
+
+#combined labelled
+pdf(file = "beta_diversity_manuscript_labelled.pdf", onefile = T, useDingbats = T) #previous name: beta_disorder_trait_plot_updated_DYS.pdf
+#plot
+layout(matrix(1:2,ncol=2), width = c(2,1),height = c(1,1))
+par(bty="l")
+plot(pcoa, display = "sites", #package originally developed for ecologists
+     xlab = "PCoA1 (9.8%)", ylab = "PCoA2 (7.1%)", cex.lab = 0.8, cex.axis = 0.6)
+#     main = "Beta diversity of mental health disorders", cex.main = 1) 
+points(pcoa, col = alpha(cols, 0.5), pch=19) 
+
+plot(envfit_age, labels = "Age", col = "black", cex = 0.5)
+plot(envfit_sex, labels = "Sex", col = "black", cex = 0.5)
+plot(envfit_bmi, labels = "BMI", col = "black", cex = 0.5)
+plot(envfit_dep, labels = "AnyDep", col = "black", cex = 0.5)
+plot(envfit_dys, labels = "DYS", col = "black", cex = 0.5)
+plot(envfit_mdd, labels = "MDD", col = "black", cex = 0.5)
+plot(envfit_ltmdd, labels = "LT-MDD", col = "black", cex = 0.5)
+plot(envfit_anx, labels = "AnyAnx", col = "black", cex = 0.5)
+plot(envfit_gad, labels = "GAD", col = "black", cex = 0.5)
+plot(envfit_ltgad, labels = "LT-GAD", col = "black", cex = 0.5)
+plot(envfit_sri, labels = "SSRI", col = "black", cex = 0.5)
+plot(envfit_ptd_all, labels = "PTDs", col = "black", cex = 0.5)
+
+#legend
+colors = c("#FF9190","#120C6E")
+colfunc = colorRampPalette(colors)
+
+legend_image <- as.raster(matrix(colfunc(20), ncol=1))
+plot(c(0,2),c(0,1),type = 'n', axes = F,xlab = '', ylab = '', main = 'Prevotella copri', cex.main= 0.8)
+text(x=0.5, y = seq(0,1,l=6), labels = c("10%", "20%", "40%", "60%", "80%", "100%"), cex=0.6)
+rasterImage(legend_image, 0, 0, 0.2,1) #xleft, ybottom, xright, ytop
+dev.off()
+#only plots first 2 PCoAs
+
+
+#combined unlabeled
+pdf(file = "beta_diversity_manuscript_unlabelled.pdf", onefile = T, useDingbats = T) #previous name: beta_disorder_trait_plot_updated_DYS_unlabeled.pdf
+
+#plot
+layout(matrix(1:2,ncol=2), width = c(2,1),height = c(1,1))
+par(bty="l")
+plot(pcoa, display = "sites", #package originally developed for ecologists
+     xlab = "PCoA1 (9.8%)", ylab = "PCoA2 (7.1%)", cex.lab = 0.8, cex.axis = 0.6)
+#     main = "Beta diversity of mental health disorders", cex.main = 1) 
+points(pcoa, col = alpha(cols, 0.5), pch=19) 
+
+plot(envfit_age, labels = "", col = "black", cex = 0.5)
+plot(envfit_sex, labels = "", col = "black", cex = 0.5)
+plot(envfit_bmi, labels = "", col = "black", cex = 0.5)
+plot(envfit_dep, labels = "", col = "black", cex = 0.5)
+plot(envfit_dys, labels = "", col = "black", cex = 0.5)
+plot(envfit_mdd, labels = "", col = "black", cex = 0.5)
+plot(envfit_ltmdd, labels = "", col = "black", cex = 0.5)
+plot(envfit_anx, labels = "", col = "black", cex = 0.5)
+plot(envfit_gad, labels = "", col = "black", cex = 0.5)
+plot(envfit_ltgad, labels = "", col = "black", cex = 0.5)
+plot(envfit_sri, labels = "", col = "black", cex = 0.5)
+plot(envfit_ptd_all, labels = "", col = "black", cex = 0.5)
+
+#legend
+colors = c("#FF9190","#120C6E")
+colfunc = colorRampPalette(colors)
+
+legend_image <- as.raster(matrix(colfunc(20), ncol=1))
+plot(c(0,2),c(0,1),type = 'n', axes = F,xlab = '', ylab = '', main = 'Prevotella copri', cex.main= 0.8)
+text(x=0.5, y = seq(0,1,l=6), labels = c("10%", "20%", "40%", "60%", "80%", "100%"), cex=0.6)
+rasterImage(legend_image, 0, 0, 0.2,1) #xleft, ybottom, xright, ytop
+dev.off()
