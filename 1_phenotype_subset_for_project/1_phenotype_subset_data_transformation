@@ -1,0 +1,116 @@
+###     SCRIPT: PHENOTYPE DATA NORMALIZATION
+###     AUTHOR(S): SIOBHAN BRUSHETT 
+###     DESCRIPTION: HISTOGRAM PLOTS AND NORMALIZATION OF PHENOTYPE DATA
+###     PROJECT: PSYCH-MICROBIOME
+###     NOTE(S):
+
+
+##Contents of this file
+
+## 0. LOAD DATA
+## 1. HISTOGRAM PLOTS NUMERICAL DATA
+## 2. INVERSE-RANK NORMALIZATION OF NUMERICAL DATA
+
+        ## =============== 0. LOAD DATA   ================ ##
+
+phenotypes = read.csv("25.05.2021_phenotypes.csv", header=T, as.is=T, sep=",", row.names = 1)
+
+
+        ## =============== 1. HISTOGRAM PLOTS NUMERICAL DATA   ================ ##
+
+numerical_data <- phenotypes[, c("ANTHRO.AGE",
+                             "ANTHRO.BMI", 
+                             "EXP.DIET.ECorrected.AlchAll",
+                             "EXP.DIET.Scores.LLDietScore",
+                             "MED.DISEASES.Gastrointestinal.Discomfort.Unwell",
+                             "MED.DISEASES.Gastrointestinal.Discomfort.Pain",
+                             "MED.DISEASES.Gastrointestinal.Discomfort.Bloating",
+                             "MED.DISEASES.Gastrointestinal.Discomfort.Flatulence",
+                             "MED.DISEASES.Gastrointestinal.Discomfort.Burping",
+                             "MED.DISEASES.Gastrointestinal.Discomfort.Nausea",
+                             "META.DNA.conc.ng.ul",
+                             "META.DNA.postclean.reads",
+                             "META.POOP.BristolMean",
+                             "META.POOP.Freq",
+                             "SOCIOECONOMIC.BUURT.Highincome.Pop.Prop",
+                             "SOCIOECONOMIC.BUURT.Lowincome.Pop.Prop",
+                             "SOCIOECONOMIC.BUURT.Urbanicity",
+                             "MED.HEALTH.EQ5D.rate_2a",
+                             "MINI.MDD.Symp_Sum_2a",
+                             "MINI.GAD.Symp_Sum_2a",
+                             "PANAS.Negative_Affect_2b",
+                             "PANAS.Positive_Affect_2b",
+                             "NEO.Neuroticism_Complete_1a",
+                             "NEO.Neuroticism_Partial_1a",
+                             "BIONIC.AGE", "BIONIC.DEP_AOO_RECODE")]
+
+numerical <- colnames(numerical_data)
+
+pdf("30.06.2021_DAG3_MentalHeatlh_histogram_filter_UPDATED.pdf",onefile = T)
+for (i in numerical) {hist(phenotypes[,i],breaks = 40)}
+dev.off()
+
+        ## 2. INVERSE RANK - NORMALIZATION OF NUMERICAL DATA
+invrank <- function(x) {qnorm((rank(x,na.last="keep")-0.5)/sum(!is.na(x)))}
+
+
+phenotypes$ANTHRO.AGE_tran = invrank(phenotypes$ANTHRO.AGE)
+phenotypes$ANTHRO.BMI_tran = invrank(phenotypes$ANTHRO.BMI)
+phenotypes$EXP.DIET.ECorrected.AlchAll_tran = invrank(phenotypes$EXP.DIET.ECorrected.AlchAll)
+phenotypes$EXP.DIET.Scores.LLDietScore_tran = invrank(phenotypes$EXP.DIET.Scores.LLDietScore)
+phenotypes$MED.DISEASES.Gastrointestinal.Discomfort.Unwell_tran = invrank(phenotypes$MED.DISEASES.Gastrointestinal.Discomfort.Unwell)
+phenotypes$MED.DISEASES.Gastrointestinal.Discomfort.Pain_tran = invrank(phenotypes$MED.DISEASES.Gastrointestinal.Discomfort.Pain)
+phenotypes$MED.DISEASES.Gastrointestinal.Discomfort.Bloating_tran = invrank(phenotypes$MED.DISEASES.Gastrointestinal.Discomfort.Bloating)
+phenotypes$MED.DISEASES.Gastrointestinal.Discomfort.Flatulence_tran = invrank(phenotypes$MED.DISEASES.Gastrointestinal.Discomfort.Flatulence)
+phenotypes$MED.DISEASES.Gastrointestinal.Discomfort.Burping_tran = invrank(phenotypes$MED.DISEASES.Gastrointestinal.Discomfort.Burping)
+phenotypes$MED.DISEASES.Gastrointestinal.Discomfort.Nausea_tran = invrank(phenotypes$MED.DISEASES.Gastrointestinal.Discomfort.Nausea)
+phenotypes$META.DNA.conc.ng.ul_tran = invrank(phenotypes$META.DNA.conc.ng.ul)
+phenotypes$META.DNA.postclean.reads_tran = invrank(phenotypes$META.DNA.postclean.reads)
+phenotypes$META.POOP.BristolMean_tran = invrank(phenotypes$META.POOP.BristolMean)
+phenotypes$META.POOP.Freq_tran = invrank(phenotypes$META.POOP.Freq)
+phenotypes$SOCIOECONOMIC.BUURT.Highincome.Pop.Prop_tran = invrank(phenotypes$SOCIOECONOMIC.BUURT.Highincome.Pop.Prop)
+phenotypes$SOCIOECONOMIC.BUURT.Lowincome.Pop.Prop_tran = invrank(phenotypes$SOCIOECONOMIC.BUURT.Lowincome.Pop.Prop)
+phenotypes$SOCIOECONOMIC.BUURT.Urbanicity_tran = invrank(phenotypes$SOCIOECONOMIC.BUURT.Urbanicity)
+phenotypes$MED.HEALTH.EQ5D.rate_2a_tran = invrank(phenotypes$MED.HEALTH.EQ5D.rate_2a)
+phenotypes$MINI.MDD.Symp_Sum_2a_tran = invrank(phenotypes$MINI.MDD.Symp_Sum_2a)
+phenotypes$MINI.GAD.Symp_Sum_2a_tran = invrank(phenotypes$MINI.GAD.Symp_Sum_2a)
+phenotypes$PANAS.Negative_Affect_2b_tran = invrank(phenotypes$PANAS.Negative_Affect_2b)
+phenotypes$PANAS.Positive_Affect_2b_tran = invrank(phenotypes$PANAS.Positive_Affect_2b)
+phenotypes$NEO.Neuroticism_Complete_1a_tran = invrank(phenotypes$NEO.Neuroticism_Complete_1a)
+phenotypes$NEO.Neuroticism_Partial_1a_tran = invrank(phenotypes$NEO.Neuroticism_Partial_1a)
+phenotypes$BIONIC.AGE_tran = invrank(phenotypes$BIONIC.AGE)
+phenotypes$BIONIC.DEP_AOO_RECODE_tran = invrank(phenotypes$BIONIC.DEP_AOO_RECODE)
+
+transformed_data <- c("ANTHRO.AGE_tran", "ANTHRO.BMI_tran", 
+                             "EXP.DIET.ECorrected.AlchAll_tran", "EXP.DIET.Scores.LLDietScore_tran",
+                             "MED.DISEASES.Gastrointestinal.Discomfort.Unwell_tran",
+                             "MED.DISEASES.Gastrointestinal.Discomfort.Pain_tran",
+                             "MED.DISEASES.Gastrointestinal.Discomfort.Bloating_tran",
+                             "MED.DISEASES.Gastrointestinal.Discomfort.Flatulence_tran",
+                             "MED.DISEASES.Gastrointestinal.Discomfort.Burping_tran",
+                             "MED.DISEASES.Gastrointestinal.Discomfort.Nausea_tran",
+                             "META.DNA.conc.ng.ul_tran",
+                             "META.DNA.postclean.reads_tran",
+                             "META.POOP.BristolMean_tran",
+                             "META.POOP.Freq_tran",
+                             "SOCIOECONOMIC.BUURT.Highincome.Pop.Prop_tran",
+                             "SOCIOECONOMIC.BUURT.Lowincome.Pop.Prop_tran",
+                             "SOCIOECONOMIC.BUURT.Urbanicity_tran",
+                             "eq5d_rate_2a_tran",
+                             "MINI.MDD.Symp_Sum_2a_tran",
+                             "MINI.GAD.Symp_Sum_2a_tran",
+                             "PANAS.Negative_Affect_2b_tran",
+                             "PANAS.Positive_Affect_2b_tran",
+                             "NEO.Neuroticism_Complete_1a_tran",
+                             "NEO.Neuroticism_Partial_1a_tran",
+                             "BIONIC.AGE_tran", "BIONIC.DEP_AOO_RECODE_tran")
+
+pdf("01.07.2021_DAG3_MentalHeatlh_transformed_histogram_filter_UPDATED.pdf",onefile = T)
+for (i in transformed_data) {hist(phenotypes[,i],breaks = 40)}
+dev.off()
+
+dim(phenotypes)
+#7656  187
+
+write.csv(phenotypes, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile_subset/24.06.2021_transformed_phenotypes.csv")
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile_subset
