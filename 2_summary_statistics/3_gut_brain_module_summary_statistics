@@ -7,9 +7,11 @@
 ##Contents of this file
 
 ## 0. LOAD DATA
-## 1.
+## 1. MAKE DATA FRAMES FOR SUMMARY STATISTICS
+## 2. GBM SUMMARY STATISTICS
 
 library(tidyverse)
+library(fido)
 
         ## =============== 0. LOAD DATA   ================ ##
 
@@ -45,6 +47,25 @@ length(samples)
 GBM = GBM[samples,]
 dim(GBM)
 #7632 49
+write.csv(GBM, "DAG3_abundance_GBM_linked_disorders.csv", row.names = F)
+
+#read in on local laptop as fido package is not installed on the cluster
+#fido package is needed to transform data to relative abundance (sum_total = 1) [multiply summary stats by 100 to get percentage where necessary]
+
+library(fido)
+gbm <- read.csv("/DAG3_abundance_GBM_linked_disorders.csv", row.names = 1)
+
+str(gbm)
+gbm_ra <- miniclo(gbm)
+x=rowSums(gbm_ra)
+unique(x)
+
+write.csv(gbm_ra, "/DAG3_abundance_GBM_linked_disorders_RA.csv",row.names = T)
+
+#read in file in cluster environment
+GBM <- read.csv("DAG3_abundance_GBM_linked_disorders_RA.csv", row.names = 1)
+str(GBM)
+
 
         ## =============== 1. MAKE DATA FRAMES FOR SUMMARY STATISTICS   ================ ##
 
@@ -159,8 +180,8 @@ dim(GBM_LTGAD)
         #a. entire population
 new_df <- as.data.frame(t(GBM))
 #49 7632
-summary_stats_population <- data.frame(population_mean = apply(new_df, 1, function(x) {mean(x)}))
-summary_stats_population$population_sd <- apply(new_df, 1, function(x) {sd(x)})
+summary_stats_population <- data.frame(population_mean = apply(new_df, 1, function(x) {mean(x)*100}))
+summary_stats_population$population_sd <- apply(new_df, 1, function(x) {sd(x)*100})
 
 #to obtain presence we need to change values > 0 to 1, and then sum each row
 population_presence <- new_df
@@ -171,8 +192,8 @@ summary_stats_population$gbm <- rownames(summary_stats_population) #for merging 
         #1. control
 new_df <- as.data.frame(t(GBM_controls))
 #49 5503
-summary_stats_control <- data.frame(control_mean = apply(new_df, 1, function(x) {mean(x)}))
-summary_stats_control$control_sd <- apply(new_df, 1, function(x) {sd(x)})
+summary_stats_control <- data.frame(control_mean = apply(new_df, 1, function(x) {mean(x)*100}))
+summary_stats_control$control_sd <- apply(new_df, 1, function(x) {sd(x)*100})
 
 #to obtain presence we need to change values > 0 to 1, and then sum each row
 control_presence <- new_df
@@ -182,8 +203,8 @@ summary_stats_control$gbm <- rownames(summary_stats_control)
 
         #2. AnyDep
 new_df <- as.data.frame(t(GBM_AnyDep))
-summary_stats_anydep <- data.frame(anydep_mean = apply(new_df, 1, function(x) {mean(x)}))
-summary_stats_anydep$anydep_sd <- apply(new_df, 1, function(x) {sd(x)})
+summary_stats_anydep <- data.frame(anydep_mean = apply(new_df, 1, function(x) {mean(x)*100}))
+summary_stats_anydep$anydep_sd <- apply(new_df, 1, function(x) {sd(x)*100})
 
 #to obtain presence we need to change values > 0 to 1, and then sum each row
 anydep_presence <- new_df
@@ -193,8 +214,8 @@ summary_stats_anydep$gbm <- rownames(summary_stats_anydep)
 
         #3. DYS
 new_df <- as.data.frame(t(GBM_DYS))
-summary_stats_dys <- data.frame(dys_mean = apply(new_df, 1, function(x) {mean(x)}))
-summary_stats_dys$dys_sd <- apply(new_df, 1, function(x) {sd(x)})
+summary_stats_dys <- data.frame(dys_mean = apply(new_df, 1, function(x) {mean(x)*100}))
+summary_stats_dys$dys_sd <- apply(new_df, 1, function(x) {sd(x)*100})
 
 #to obtain presence we need to change values > 0 to 1, and then sum each row
 dys_presence <- new_df
@@ -204,8 +225,8 @@ summary_stats_dys$gbm <- rownames(summary_stats_dys)
 
         #4. MDD
 new_df <- as.data.frame(t(GBM_MDD))
-summary_stats_mdd <- data.frame(mdd_mean = apply(new_df, 1, function(x) {mean(x)}))
-summary_stats_mdd$mdd_sd <- apply(new_df, 1, function(x) {sd(x)})
+summary_stats_mdd <- data.frame(mdd_mean = apply(new_df, 1, function(x) {mean(x)*100}))
+summary_stats_mdd$mdd_sd <- apply(new_df, 1, function(x) {sd(x)*100})
 
 #to obtain presence we need to change values > 0 to 1, and then sum each row
 mdd_presence <- new_df
@@ -215,8 +236,8 @@ summary_stats_mdd$gbm <- rownames(summary_stats_mdd)
 
         #5. LTMDD
 new_df <- as.data.frame(t(GBM_LTMDD))
-summary_stats_ltmdd <- data.frame(ltmdd_mean = apply(new_df, 1, function(x) {mean(x)}))
-summary_stats_ltmdd$ltmdd_sd <- apply(new_df, 1, function(x) {sd(x)})
+summary_stats_ltmdd <- data.frame(ltmdd_mean = apply(new_df, 1, function(x) {mean(x)*100}))
+summary_stats_ltmdd$ltmdd_sd <- apply(new_df, 1, function(x) {sd(x)*100})
 
 #to obtain presence we need to change values > 0 to 1, and then sum each row
 ltmdd_presence <- new_df
@@ -226,8 +247,8 @@ summary_stats_ltmdd$gbm <- rownames(summary_stats_ltmdd)
 
         #6. AnyAnx
 new_df <- as.data.frame(t(GBM_AnyAnx))
-summary_stats_anyanx <- data.frame(anyanx_mean = apply(new_df, 1, function(x) {mean(x)}))
-summary_stats_anyanx$anyanx_sd <- apply(new_df, 1, function(x) {sd(x)})
+summary_stats_anyanx <- data.frame(anyanx_mean = apply(new_df, 1, function(x) {mean(x)*100}))
+summary_stats_anyanx$anyanx_sd <- apply(new_df, 1, function(x) {sd(x)*100})
 
 #to obtain presence we need to change values > 0 to 1, and then sum each row
 anyanx_presence <- new_df
@@ -237,8 +258,8 @@ summary_stats_anyanx$gbm <- rownames(summary_stats_anyanx)
 
         #7. GAD
 new_df <- as.data.frame(t(GBM_GAD))
-summary_stats_gad <- data.frame(gad_mean = apply(new_df, 1, function(x) {mean(x)}))
-summary_stats_gad$gad_sd <- apply(new_df, 1, function(x) {sd(x)})
+summary_stats_gad <- data.frame(gad_mean = apply(new_df, 1, function(x) {mean(x)*100}))
+summary_stats_gad$gad_sd <- apply(new_df, 1, function(x) {sd(x)*100})
 
 #to obtain presence we need to change values > 0 to 1, and then sum each row
 gad_presence <- new_df
@@ -248,8 +269,8 @@ summary_stats_gad$gbm <- rownames(summary_stats_gad)
 
         #8. LTGAD
 new_df <- as.data.frame(t(GBM_LTGAD))
-summary_stats_ltgad <- data.frame(ltgad_mean = apply(new_df, 1, function(x) {mean(x)}))
-summary_stats_ltgad$ltgad_sd <- apply(new_df, 1, function(x) {sd(x)})
+summary_stats_ltgad <- data.frame(ltgad_mean = apply(new_df, 1, function(x) {mean(x)*100}))
+summary_stats_ltgad$ltgad_sd <- apply(new_df, 1, function(x) {sd(x)*100})
 
 #to obtain presence we need to change values > 0 to 1, and then sum each row
 ltgad_presence <- new_df
