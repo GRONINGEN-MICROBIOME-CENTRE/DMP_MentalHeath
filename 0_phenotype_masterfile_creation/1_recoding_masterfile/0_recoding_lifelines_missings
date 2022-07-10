@@ -1,0 +1,93 @@
+###     SCRIPT: MENTAL HEALTH VARIABLE RECODING
+###     AUTHOR(S): SIOBHAN BRUSHETT
+###     DESCRIPTION: RECODING OF MENTAL HEALTH VARIABLES IN LL WAVE 1A DUE TO DIFFERENT MINI VERSIONS
+###     PROJECT: PSYCH-MICROBIOME
+###     NOTE(S):
+
+##Contents of this file
+
+## 0. LOAD DATA
+## 1. RECODING OF LIFELINES DEFINED NAs
+## 2. RECODING OF IPP (WAVE 1A)
+## 3. RECODING OF ANY DEPRESSION (WAVE 1A)
+## 4. RECODING OF ANY ANXIETY (WAVE 1A)
+
+
+        ## =============== 0. LOAD DATA   ================ ##
+
+library(tidyverse)
+Masterfile = read.csv("10.05.2021_Masterfile.csv", header=T, as.is=T, sep=",", na.strings = c("", "NA"))
+
+        ## =============== 1. RECODING OF LIFELINES DEFINED NAs   ================ ##
+
+#allocate all missing types of new pheno release to NAs
+Masterfile <- Masterfile %>% dplyr::na_if("$4")
+Masterfile <- Masterfile %>% dplyr::na_if("$5")
+Masterfile <- Masterfile %>% dplyr::na_if("$6")
+Masterfile <- Masterfile %>% dplyr::na_if("$7")
+
+#factorise all characters
+Masterfile = mutate_if (Masterfile, is.character, as.factor) 
+
+        ## =============== 2. RECODING OF IPP (WAVE 1A)   ================ ##
+
+#INTERNALIZING PSYCHOPATHOLOGY_HISTORY
+        
+summary(Masterfile$miniv1_anyippyear_1a) 
+#1: 299         2: 2135       #NAs: 152346
+summary(Masterfile$mini_anyipp_1a) 
+#1: 13592       2: 132433       #NAs: 8755
+
+Masterfile$MINI.DERV.Any_IPP_1a <- NA
+Masterfile$MINI.DERV.Any_IPP_1a <- case_when(Masterfile$miniv1_anyippyear_1a %in% 2 ~ 2,
+                                  Masterfile$miniv1_anyippyear_1a %in% 1 ~ 1,
+                                  Masterfile$mini_anyipp_1a %in% 2 ~ 2,
+                                  Masterfile$mini_anyipp_1a %in% 1 ~ 1,
+                               TRUE ~ as.numeric(Masterfile$MINI.DERV.Any_IPP_1a))
+
+table(Masterfile$MINI.DERV.Any_IPP_1a, useNA="ifany")
+#1      2   <NA>
+#13891 134568   6321
+
+        ## =============== 3. RECODING OF ANY DEPRESSION (WAVE 1A)   ================ ##
+
+#ANY DEPRESSION_HISTORY
+
+summary(Masterfile$miniv1_anydepyear_1a) 
+#1: 197         2: 2237       #NAs: 152346
+summary(Masterfile$mini_anydep_1a) 
+#1: 4909       2: 140914       #NAs: 8957
+
+Masterfile$MINI.DERV.Any_Dep_1a <- NA
+Masterfile$MINI.DERV.Any_Dep_1a <- case_when(Masterfile$miniv1_anydepyear_1a %in% 2 ~ 2,
+                                             Masterfile$miniv1_anydepyear_1a %in% 1 ~ 1,
+                                             Masterfile$mini_anydep_1a %in% 2 ~ 2,
+                                             Masterfile$mini_anydep_1a %in% 1 ~ 1,
+                                             TRUE ~ as.numeric(Masterfile$MINI.DERV.Any_Dep_1a))
+
+table(Masterfile$MINI.DERV.Any_Dep_1a, useNA="ifany")
+#1      2   <NA>
+#5106 143151   6523
+
+        ## =============== 4. RECODING OF ANY ANXIETY (WAVE 1A)   ================ ##
+        
+#ANY ANXIETY_HISTORY
+        
+summary(Masterfile$miniv1_anyanxyear_1a) 
+#1: 181         2: 2256       #NAs: 152343
+summary(Masterfile$mini_anyanx_1a) 
+#1: 11541       2: 134801       #NAs: 8438
+
+Masterfile$MINI.DERV.Any_Anx_1a <- NA
+Masterfile$MINI.DERV.Any_Anx_1a <- case_when(Masterfile$miniv1_anyanxyear_1a %in% 2 ~ 2,
+                                             Masterfile$miniv1_anyanxyear_1a %in% 1 ~ 1,
+                                             Masterfile$mini_anyanx_1a %in% 2 ~ 2,
+                                             Masterfile$mini_anyanx_1a %in% 1 ~ 1,
+                                             TRUE ~ as.numeric(Masterfile$MINI.DERV.Any_Anx_1a))
+
+table(Masterfile$MINI.DERV.Any_Anx_1a, useNA="ifany")
+#1      2   <NA>
+#11722 137057   6001
+
+write.csv(Masterfile, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/WorkingDirectory/11.05.2021_Masterfile_rec.csv")
+#updated file location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile
