@@ -1,0 +1,280 @@
+###     SCRIPT: PSYCH-MICROBIOME MASTERFILE
+###     AUTHOR(S): SIOBHAN BRUSHETT 
+###     DESCRIPTION: SUBSET OF MAIN MASTERFILE TO PSYCH-MICROBIOME SPECIFIC MASTERFILE/PROJECT
+###     PROJECT: PSYCH-MICROBIOME
+###     NOTE(S): 
+
+
+##Contents of this file
+
+## 0. LOAD DATA
+## 1. RENAME VARIABLES
+## 2. RECODE Any_Anx VARIABLE
+## 3. SELECTION OF PSYCH-MICROBIOME VARIABLES
+## 4. SUBSET PSYCH-MICROBIOME MASTERFILE
+## 5. QUICK STATS (NORMALACY)
+
+library(tidyverse)
+
+#updated locations: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile
+
+        ## =============== 0. LOAD DATA   ================ ##
+
+masterfile = read.csv("18.05.2021_Masterfile_rec_sym_PANAS_NEO_BIONIC.csv", header=T, as.is=T, sep=",")
+str(masterfile)
+#154780    460
+
+        ## =============== 1. RENAME VARIABLES   ================ ##
+
+masterfile <- masterfile %>% rename("MINI.MDD_2a" = "mini_mdd_2a" , "MINI.DYS_2a" = 'mini_dys_2a' ,"MINI.GAD_2a" = "mini_gad_2a" ,
+                                    "MINI.PD_2a" = "mini_pd_2a" , "MINI.SPH_2a" = "mini_sph_2a",
+                                    "MINI.Any_Dep_2a" ="mini_anydep_2a", "MINI.Any_Anx_2a" = "mini_anyanx_2a", "MINI.Any_IPP_2a" = "mini_anyipp_2a", #MINI_diagnosis
+                                    "MINI.MDD.Symp_Sum_2a" = "mdd_symp_sum", "MINI.GAD.Symp_Sum_2a" = "gad_symp_sum", #MINI_symptoms
+                                    "PANAS.Negative_Affect_2b" = "negative_affect_2b", "PANAS.Positive_Affect_2b" = "positive_affect_2b",#PANAS
+                                    "NEO.Neuroticism_Complete_1a" = "neu_complete_1a", "NEO.Neuroticism_Partial_1a" = "neuro_partial_1a", #NEO_neuroticism
+                                    "BIONIC.MDD_Lifetime"="MDD_LT", #BIONIC_MDD_lifetime
+                                    "BIONIC.MDD_Lifetime_severe" = "BIONIC_1.MDD_Lifetime_severe", #BIONIC_MDD_Lifetime_severe
+                                    "BIONIC.GAD_Lifetime"="GAD_LT", #BIONIC_GAD_lifetime
+                                    "BIONIC.FORM_ID"="FORM_ID",
+                                    "BIONIC.AGE"="AGE_LD",
+                                    "BIONIC.SEX"="GESLACHT",
+                                    "BIONIC.GENDER"="GENDER",
+                                    "BIONIC.LENGTH"="LENGTH",
+                                    "BIONIC.WEIGHT"="WEIGHT",
+                                    "BIONIC.EDUCATION"="EDUCATION",
+                                    "BIONIC.DEP_Activities" = "ACTIVITIES",
+                                    "BIONIC.DEP_Episodes"="DEPTIME2",
+                                    "BIONIC.DEP_AOO"="AOO_MDD",
+                                    "BIONIC.DIAG_None"="OTHER2A",
+                                    "BIONIC.DIAG_Dep"="OTHER2B",
+                                    "BIONIC.DIAG_Bipolar"="OTHER2C",
+                                    "BIONIC.DIAG_Schizo"="OTHER2D",
+                                    "BIONIC.DIAG_Eating_disorder"="OTHER2E",
+                                    "BIONIC.DIAG_Anxiety_disorder"="OTHER2F",
+                                    "BIONIC.DIAG_Panic_disorder"="OTHER2G",
+                                    "BIONIC.DIAG_OCD"="OTHER2H",
+                                    "BIONIC.DIAG_PTSS"="OTHER2I",
+                                    "BIONIC.DIAG_Phobia"="OTHER2J",
+                                    "BIONIC.DIAG_ADD.ADHD"="OTHER2K",
+                                    "BIONIC.DIAG_Personality_disorder"="OTHER2L",
+                                    "BIONIC.DIAG_Alcohol_dependence"="OTHER2M",
+                                    "BIONIC.DIAG_Drug_dependence"="OTHER2N",
+                                    "BIONIC.DIAG_Other"="OTHER2O",
+                                    "BIONIC.DIAG_Other_specification"="OTHER2O1",
+                                    "BIONIC.TREAT_None"="TREAT1A",
+                                    "BIONIC.TREAT_Antidepressants"="TREAT1B",
+                                    "BIONIC.TREAT_Admitted"="TREAT1G",
+                                    "BIONIC.TREAT_ECT"="TREAT1H",
+                                    "BIONIC.TREAT_Other"="TREAT1I",
+                                    "BIONIC.TREAT_Other_specification"="TREAT1I1")
+        
+        ## =============== 2. RECODE Any_Anx VARIABLE   ================ ##
+
+masterfile$MINI.Any_Anx_2a_RECODE <- NA
+masterfile$MINI.Any_Anx_2a_RECODE[masterfile$MINI.GAD_2a ==1 | masterfile$MINI.PD_2a==1 | masterfile$MINI.SPH_2a==1] <- 1
+masterfile$MINI.Any_Anx_2a_RECODE[masterfile$MINI.GAD_2a ==2 & masterfile$MINI.PD_2a==2 & masterfile$MINI.SPH_2a==2] <- 2
+table(masterfile$MINI.Any_Anx_2a_RECODE, useNA="ifany")
+# 1     2  <NA>
+#5301 74665 74814
+
+table(masterfile$MINI.Any_Anx_2a, useNA="ifany")
+#1     2  <NA>
+#6636 73330 74814
+##MAKES SENSE AS THIS DERIVATIVE WAS INCLUSIVE OF AGPH.
+
+        ## =============== 3. SELECTION OF PSYCH-MICROBIOME VARIABLES   ================ ##
+
+psychmicro <- masterfile [ , c("PROJECT_PSEUDO_ID", "DAG3_sampleID", "PSEUDOIDEXT",
+                               "ANTHRO.AGE", "ANTHRO.BMI", "ANTHRO.Sex",
+                               "EXP.DIET.ECorrected.AlchAll",
+                               "EXP.DIET.Scores.LLDietScore",
+                               "EXP.EARLYLIFE.LIVINGPLACE.child.1.4",
+                               "EXP.PETS.now.Any",
+                               "EXP.PETS.now.Cat",
+                               "EXP.PETS.now.Dog",
+                               "MED.DISEASES.Cancer.AnyNonBasal",
+                               "MED.DISEASES.Gastrointestinal.Autoimmune.IBD.CD",
+                               "MED.DISEASES.Gastrointestinal.Autoimmune.IBD.UC",
+                               "MED.DISEASES.Gastrointestinal.Rome3_IBS.Any",
+                               "MED.DISEASES.Gastrointestinal.Rome3_IBS.TypeC",
+                               "MED.DISEASES.Gastrointestinal.Rome3_IBS.TypeM",
+                               "MED.DISEASES.Gastrointestinal.Rome3_IBS.TypeD",
+                               "MED.DISEASES.Gastrointestinal.FGID.Bloating",
+                               "MED.DISEASES.Gastrointestinal.FGID.Constipation",
+                               "MED.DISEASES.Gastrointestinal.FGID.Diarrhea",
+                               "MED.DISEASES.Gastrointestinal.Discomfort.Unwell",
+                               "MED.DISEASES.Gastrointestinal.Discomfort.Pain",
+                               "MED.DISEASES.Gastrointestinal.Discomfort.Bloating",
+                               "MED.DISEASES.Gastrointestinal.Discomfort.Flatulence",
+                               "MED.DISEASES.Gastrointestinal.Discomfort.Burping",
+                               "MED.DISEASES.Gastrointestinal.Discomfort.Nausea",
+                               "MED.DISEASES.Rome3_IBS.factor",
+                               "MED.DISEASES.Mental.Addiction.Any",
+                               "MED.DISEASES.Mental.ADHD",
+                               "MED.DISEASES.Mental.Agoraphobia",
+                               "MED.DISEASES.Mental.Any",
+                               "MED.DISEASES.Mental.Bipolar",
+                               "MED.DISEASES.Mental.Burn.Out",
+                               "MED.DISEASES.Mental.Depression",
+                               "MED.DISEASES.Mental.Eating.disorder",
+                               "MED.DISEASES.Mental.OCD",
+                               "MED.DISEASES.Mental.Other.anxiety",
+                               "MED.DISEASES.Mental.Panic.disorder",
+                               "MED.DISEASES.Mental.Social.phobia",
+                               "MED.DISEASES.Neurological.Autoimmune.Multiple.Sclerosis",
+                               "MED.DISEASES.Neurological.Dizziness.Falling",
+                               "MED.DISEASES.Neurological.Epilepsy",
+                               "MED.DISEASES.Neurological.Headaches.Duration",
+                               "MED.DISEASES.Neurological.Headaches.HowOften",
+                               "MED.DISEASES.Neurological.Mental.Fatigue.Chronic",
+                               "MED.DISEASES.Neurological.Mental.Fibromyalgia",
+                               "MED.DISEASES.Neurological.Migraine",
+                               "MED.DISEASES.Neurological.Seizure.Fit",
+                               "MED.DISEASES.Neurological.Stroke",
+                               "MED.DISEASES.None.No.Diseases",
+                               "MED.HEALTH.RAND.Health.Change.1y",
+                               "MED.HEALTH.RAND.Health.General",
+                               "MED.MEDS.Antibacterials_ATC_J01",
+                               "MED.MEDS.Antipsychotics_atypical_ATC_N05AH",
+                               "MED.MEDS.Benzodiazepine_agonists_ATC_N05",
+                               "MED.MEDS.Intestinal_antiinflammatory_agents_ATC_A07E",
+                               "MED.MEDS.Other_NervousSystem_ATC_N",
+                               "MED.MEDS.PPIs_ATC_A02BC",
+                               "MED.MEDS.Psychoanaleptics_ATC_N06",
+                               "MED.MEDS.Psycholeptics_ATC_N05",
+                               "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                               "MED.MEDS.SexHormones_AndModulators_ATC_G03",
+                               "MED.MEDS.Tricyclic_antidepressants_ATC_N06AA",
+                               "MED.MEDS.Vitamine_B_ATC_A11DA",
+                               "MED.MEDS.Vitamine_D_ATC_A11CC",
+                               "MED.MEDS.Vitamine_supplements_ATC_A11A",
+                               "META.Antibiotics_3m",
+                               "META.BATCH",
+                               "META.DNA.conc.ng.ul",
+                               "META.DNA.postclean.reads",
+                               "META.POOP.BristolMean",
+                               "META.POOP.COLLECTION_SEASON",
+                               "META.POOP.Freq",
+                               "SOCIOEC.INCOME.Income.Month",
+                               "SOCIOEC.WORK.Paidwork.any",
+                               "SOCIOEC.WORK.Unemployed",
+                               "SOCIOECONOMIC.BUURT.Highincome.Pop.Prop",
+                               "SOCIOECONOMIC.BUURT.Lowincome.Pop.Prop",
+                               "SOCIOECONOMIC.BUURT.Urbanicity",
+                               "alzheimers_presence_1a", "parkinsons_presence_1a",
+                               "hormonal_contraception_1a1", "hormonal_contraception_1a2",
+                               "employment_situation_2a", "employment_situation_2b",
+                               "educational_attainment_1a", "educational_attainment_2a",
+                               "addiction_followup_2a",
+                               "eq5d_mobility_2a", "eq5d_selfcare_2a", "eq5d_activity_2a", 
+                               "eq5d_pain_2a", "eq5d_mood_2a", "eq5d_rate_2a",
+                               "MINI.MDD_2a", "MINI.DYS_2a", "MINI.GAD_2a", "MINI.PD_2a", "MINI.SPH_2a",
+                               "MINI.Any_Anx_2a_RECODE",
+                               "MINI.Any_Dep_2a", "MINI.Any_Anx_2a", "MINI.Any_IPP_2a", 
+                               "MINI.MDD.Symp_Sum_2a", "MINI.GAD.Symp_Sum_2a",
+                               "PANAS.Negative_Affect_2b", "PANAS.Positive_Affect_2b",
+                               "NEO.Neuroticism_Complete_1a", "NEO.Neuroticism_Partial_1a",
+                               "BIONIC.MDD_Lifetime", "BIONIC_1.MDD_Lifetime_severe",
+                               "BIONIC.GAD_Lifetime",
+                               "BIONIC.FORM_ID", "INT_1A_BIONIC2", "INT_1B_BIONIC2", "INT_1C_BIONIC2", "INT_2A1_BIONIC2", "INT_2A2_BIONIC2",
+                               "BIONIC.AGE",
+                               "BIONIC.SEX",
+                               "BIONIC.GENDER",
+                               "BIONIC.LENGTH",
+                               "BIONIC.WEIGHT",
+                               "BIONIC.EDUCATION",
+                               "BIONIC.DEP_Activities",
+                               "BIONIC.DEP_Episodes",
+                               "BIONIC.DEP_AOO",
+                               "BIONIC.DIAG_None",
+                               "BIONIC.DIAG_Dep",
+                               "BIONIC.DIAG_Bipolar",
+                               "BIONIC.DIAG_Schizo",
+                               "BIONIC.DIAG_Eating_disorder",
+                               "BIONIC.DIAG_Anxiety_disorder",
+                               "BIONIC.DIAG_Panic_disorder",
+                               "BIONIC.DIAG_OCD",
+                               "BIONIC.DIAG_PTSS",
+                               "BIONIC.DIAG_Phobia",
+                               "BIONIC.DIAG_ADD.ADHD",
+                               "BIONIC.DIAG_Personality_disorder",
+                               "BIONIC.DIAG_Alcohol_dependence",
+                               "BIONIC.DIAG_Drug_dependence",
+                               "BIONIC.DIAG_Other",
+                               "BIONIC.DIAG_Other_specification",
+                               "BIONIC.TREAT_None",
+                               "BIONIC.TREAT_Antidepressants",
+                               "BIONIC.TREAT_Admitted",
+                               "BIONIC.TREAT_ECT",
+                               "BIONIC.TREAT_Other",
+                               "BIONIC.TREAT_Other_specification")]
+str(psychmicro)
+#154780  151
+
+write.csv(psychmicro, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile/19.05.2021_Masterfile_psychmicro.csv")
+       
+         ## =============== 4. SUBSET PSYCH-MICROBIOME MASTERFILE   ================ ##
+
+psychmicro$DAG3_pheno[!is.na(psychmicro$DAG3_sampleID)] <- 1
+psychmicro_DAG3 <- filter (psychmicro, DAG3_pheno== 1)
+dim(psychmicro_DAG3)
+#8299 152
+
+write.csv(psychmicro_DAG3, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile/19.05.2021_Masterfile_psychmicro.csv")
+
+        ## =============== 5. QUICK STATS - NORMALACY  ================ ##
+
+prop.table(table(psychmicro_DAG3$MINI.Any_Dep_2a))
+#1          2
+#0.03427967 0.96572033
+#as expected
+
+prop.table(table(psychmicro_DAG3$BIONIC.MDD_Lifetime))
+#1         2
+#0.2137344 0.7862656
+#as expected
+
+#this was created with the older data (not updated BIONIC data)
+numerical <- c("ANTHRO.AGE",
+               "ANTHRO.BMI",
+               "EXP.DIET.ECorrected.AlchAll",
+               "EXP.DIET.Scores.LLDietScore",
+               "MED.DISEASES.Gastrointestinal.Discomfort.Unwell",
+               "MED.DISEASES.Gastrointestinal.Discomfort.Pain",
+               "MED.DISEASES.Gastrointestinal.Discomfort.Bloating",
+               "MED.DISEASES.Gastrointestinal.Discomfort.Flatulence",
+               "MED.DISEASES.Gastrointestinal.Discomfort.Burping",
+               "MED.DISEASES.Gastrointestinal.Discomfort.Nausea",
+               "META.DNA.conc.ng.ul",
+               "META.DNA.postclean.reads",
+               "META.POOP.BristolMean",
+               "META.POOP.Freq",
+               "SOCIOECONOMIC.BUURT.Highincome.Pop.Prop",
+               "SOCIOECONOMIC.BUURT.Lowincome.Pop.Prop",
+               "SOCIOECONOMIC.BUURT.Urbanicity",
+               "MINI.MDD.Symp_Sum_2a",
+               "MINI.GAD.Symp_Sum_2a",
+               "PANAS.Negative_Affect_2b",
+               "PANAS.Positive_Affect_2b",
+               "NEO.Neuroticism_Complete_1a",
+               "NEO.Neuroticism_Partial_1a",
+               "BIONIC_1.MDD_Lifetime",
+               "BIONIC.AGE",
+               "BIONIC.LENGTH",
+               "BIONIC.WEIGHT",
+               "BIONIC_1.DEP_AOO")
+
+pdf("masterfile_numerical_hist.pdf",onefile = T)
+
+for (i in numerical) {hist(masterfile[,i],breaks = 40)}
+
+dev.off()
+
+###sftp copy to onedrive location###
+#cd /mnt/c/Users/Siobhan\ Brushett/OneDrive
+#sftp umcg-snbrushett@airlock+gearshift
+# /groups/umcg-lifelines/tmp01/users/umcg-snbrushett/DAG3_MINI
+#ls
+#get hist_age_mdd.pdf ./
+#get hist_age_no_mdd.pdf ./  
+
