@@ -1,0 +1,261 @@
+#start interactive session on the cluster:  srun --cpus-per-task=1 --mem=14gb --nodes=1 --qos=interactive --time=04:00:00 --pty bash -i
+#load R module:                             ml RPlus
+#start R (R version 4.0.3 (2020-10-10):     R
+
+
+###     SCRIPT: STUDY-WIDE FDR: DISEASE CONTROLS: INTERNALIZING DISORDERS, INTERNALIZING TRAITS/STATES, DRUGS AND GUT MICROBIOME ALPHA DIVERSITY ASSOCIATIONS
+###     AUTHOR(S): SIOBHAN BRUSHETT AND ALEX 
+###     DESCRIPTION: MULTIVARIATE ALPHA DIVERISTY AND INTERNALIZING DISORDER AND PSYCHOTROPIC DRUG ASSOCIATIONS, NEUROTICISM AND NEGATIVE AFFECT  (incl. comorbidity model)
+###     PROJECT: PSYCH-MICROBIOME
+###     NOTE(S): METAPHLAN3 DATA
+###              as LT-MDD was the only nominally significant association with alpha diveristy in the first model, models with adjustments of disorders/traits/states to drugs 
+###              were not performed
+
+##Contents of this file
+
+## 0. LOAD DATA
+## 1. FORMAT DATA BASED ON SPP
+## 2. ALPHA DIVERSITY 
+## 3. ALPHA DIVERISTY - NORMALIZATION
+## 4. MODEL 1: UNADJUSTED ASSOCIATIONS WITH INTERNALIZING DISORDERS, INTERNALIZING TRAITS/STATES AND DRUGS
+## 5. MODEL 2: ASSOCIATIONS WITH INTERNALIZING DISORDERS AND INTERNALIZING TRAITS/STATES ADJUSTED FOR SSRIs
+## 6. MODEL 3: ASSOCIATIONS WITH INTERNALIZING DISORDERS AND INTERNALIZING TRAITS/STATES ADJUSTED FOR PTDs
+
+library(tidyverse)
+library(vegan) #2.5-7
+library(foreach)
+
+## =============== 0. LOAD DATA   ================ ##
+
+phenotypes = read.csv("27.08.2021_transformed_phenotypes_control.csv", header=T, as.is=T, sep=",", row.names = 1)
+dim(phenotypes)
+# 7656  236
+
+metaphlan = read.csv("21.09.2021_MetaPhlan3_subset.csv", header=T, as.is=T, sep=",", row.names = 1)
+dim(metaphlan)
+#7656 1764
+
+## =============== 1. FORMAT DATA BASED ON SPP  ================ ##
+
+#metaphlan data format
+metaphlan_species <- metaphlan[, grep(".s__", colnames(metaphlan))]
+dim(metaphlan_species)
+#7656 1117
+
+#DO NOT READJUST OTHERWISE WE REMOVE THE EFFECTS OF THE 'UNKNOWN' COLUMN
+#OLD: re-adjust relative abundance based on spp by dividing the RA of each bacterium of each participant, by the total RA of the participant
+#OLD: metaphlan_relab <-t(apply(metaphlan_species, 1, function(x) x/sum(x)))
+
+
+## =============== 2. ALPHA DIVERSITY ================ ##
+
+#Alex's alpha diversity code for multiple alpha diversity measures
+alpha_divs = foreach(div = c("shannon","simpson","invsimpson"),.combine = cbind)%do%
+        { diversity(metaphlan_species,index = div)
+                
+        }
+
+## =============== 3. ALPHA DIVERSITY - NORMALIZATION ================ ##
+
+#check the distribution of alpha diversity measures
+pdf(file = "alpha_divs.pdf")
+hist(alpha_divs[,1], breaks = 40)
+dev.off()
+#skewed to the right
+
+#inverse rank normal function
+invrank= function(x) {qnorm((rank(x,na.last="keep")-0.5)/sum(!is.na(x)))}
+
+alpha_transformed = apply(alpha_divs,2,invrank)
+
+pdf(file = "alpha_divs_invrank.pdf")
+hist(alpha_transformed[,1], breaks = 40)
+dev.off()
+#normally distributed
+
+## =============== 4. MODEL 1: UNADJUSTED ASSOCIATIONS WITH INTERNALIZING DISORDERS, INTERNALIZING TRAITS/STATES AND DRUGS ================ ##
+
+#make sure all necessary variables are factorized
+
+model_1 <- c("MDD_control",
+             "DYS_control", #newly added
+             "AnyDep_control",
+             "LTMDDonly_control",
+             "GAD_control",
+             "AnyAnx_control",
+             "LTGADonly_control",
+             "NEO.Neuroticism_Complete_1a_tran",
+             "PANAS.Negative_Affect_2b_tran",
+             "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+             "CURRENT_TREATMENT.Mental_Health")
+
+
+model_1_alpha <- foreach(i = 1:length(model_1),.combine = rbind) %:%
+        foreach(j = 1:ncol(alpha_transformed),.combine = rbind) %do% {
+                lm1 = lm(alpha_transformed[,j] ~ phenotypes$ANTHRO.AGE + 
+                                 phenotypes$ANTHRO.Sex + 
+                                 phenotypes$ANTHRO.BMI +
+                                 phenotypes$META.BATCH + 
+                                 phenotypes$META.DNA.conc.ng.ul + 
+                                 phenotypes$META.DNA.postclean.reads +
+                                 phenotypes$META.POOP.BristolMean + 
+                                 phenotypes$META.POOP.Freq +
+                                 phenotypes$MED.MEDS.PPIs_ATC_A02BC + #newly added
+                                 phenotypes[,model_1[i]])
+                sum1 = summary(lm1)
+                disease_result = sum1$coef[nrow(sum1$coef),]  
+                data.frame(alpha_diversity = colnames(alpha_transformed)[j],
+                           factor = model_1[i],
+                           coefficient = disease_result[1],
+                           SE = disease_result[2],
+                           T_statistic = disease_result[3],
+                           P_value = disease_result[4])
+        }
+
+dim(model_1_alpha)
+#33  6  (3 indeces * 11 (7x internalizing disorders, 2x internalizing traits/states, 2x drugs))
+        
+#study-wise FDR
+model_1_alpha$FDR = p.adjust(model_1_alpha$P_value, method = "BH")
+sum(model_1_alpha$FDR<0.05)
+#0
+sum(model_1_alpha$P_value<0.05)
+#3
+
+pvalue <- model_1_alpha %>%
+        filter(P_value <0.05)
+#alpha diversity is nominally significantly decreased in LTMDD participants for all indeces.
+
+write.table(model_1_alpha, "alpha_disease_asscns_study_wide_unadjusted.txt", sep="\t", row.names=F, quote = F) 
+
+## =============== 5. MODEL 2: ASSOCIATIONS WITH INTERNALIZING DISORDERS AND INTERNALIZING TRAITS/STATES ADJUSTED FOR SSRIs ================ ##
+
+model_2 <- c("MDD_control",
+             "DYS_control", #newly added
+             "AnyDep_control",
+             "LTMDDonly_control",
+             "GAD_control",
+             "AnyAnx_control",
+             "LTGADonly_control",
+             "NEO.Neuroticism_Complete_1a_tran",
+             "PANAS.Negative_Affect_2b_tran")
+
+
+model_2_alpha <- foreach(i = 1:length(model_2),.combine = rbind) %:%
+        foreach(j = 1:ncol(alpha_transformed),.combine = rbind) %do% {
+                lm1 = lm(alpha_transformed[,j] ~ phenotypes$ANTHRO.AGE + 
+                                 phenotypes$ANTHRO.Sex + 
+                                 phenotypes$ANTHRO.BMI +
+                                 phenotypes$META.BATCH + 
+                                 phenotypes$META.DNA.conc.ng.ul + 
+                                 phenotypes$META.DNA.postclean.reads +
+                                 phenotypes$META.POOP.BristolMean + 
+                                 phenotypes$META.POOP.Freq +
+                                 phenotypes$MED.MEDS.PPIs_ATC_A02BC + #newly added
+                                 phenotypes[,model_2[i]] +
+                                 phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+                sum1 = summary(lm1)
+                SSRI_result = sum1$coef[nrow(sum1$coef),]
+                disease_result = sum1$coef[nrow(sum1$coef)-1,]  
+                data.frame(alpha_diversity = colnames(alpha_transformed)[j],
+                           factor = model_2[i],
+                           drug = "SSRI",
+                           factor_coefficient = disease_result[1],
+                           factor_SE = disease_result[2],
+                           factor_T_statistic = disease_result[3],
+                           factor_P_value = disease_result[4],
+                           SSRI_coefficient = SSRI_result[1],
+                           SSRI_SE = SSRI_result[2],
+                           SSRI_T_statistic = SSRI_result[3],
+                           SSRI_P_value = SSRI_result[4])
+        }
+
+
+dim(model_2_alpha)
+#27  11  (3 indeces * 9 (7x internalizing disorders, 2x internalizing traits/states))
+
+#study-wise FDR
+model_2_alpha$factor_FDR = p.adjust(model_2_alpha$factor_P_value, method = "BH")
+sum(model_2_alpha$factor_FDR<0.05)
+#0
+sum(model_2_alpha$factor_P_value<0.05)
+#3
+
+pvalue <- model_2_alpha %>%
+        filter(factor_P_value <0.05)
+#alpha diversity is nominally significantly decreased in LTMDD participants for all indeces, when adjusted for SSRIs.
+
+model_2_alpha$SSRI_FDR = p.adjust(model_2_alpha$SSRI_P_value, method = "BH")
+sum(model_2_alpha$SSRI_FDR<0.05)
+#0
+sum(model_2_alpha$SSRI_P_value<0.05)
+#0
+
+write.table(model_2_alpha, "alpha_disease_asscns_study_wide_SRI_adjusted.txt", sep="\t", row.names=F, quote = F) 
+
+
+## =============== 6. MODEL 3: ASSOCIATIONS WITH INTERNALIZING DISORDERS AND INTERNALIZING TRAITS/STATES ADJUSTED FOR PTDs ================ ##
+
+model_3 <- c("MDD_control",
+             "DYS_control", #newly added
+             "AnyDep_control",
+             "LTMDDonly_control",
+             "GAD_control",
+             "AnyAnx_control",
+             "LTGADonly_control",
+             "NEO.Neuroticism_Complete_1a_tran",
+             "PANAS.Negative_Affect_2b_tran")
+
+
+model_3_alpha <- foreach(i = 1:length(model_3),.combine = rbind) %:%
+        foreach(j = 1:ncol(alpha_transformed),.combine = rbind) %do% {
+                lm1 = lm(alpha_transformed[,j] ~ phenotypes$ANTHRO.AGE + 
+                                 phenotypes$ANTHRO.Sex + 
+                                 phenotypes$ANTHRO.BMI +
+                                 phenotypes$META.BATCH + 
+                                 phenotypes$META.DNA.conc.ng.ul + 
+                                 phenotypes$META.DNA.postclean.reads +
+                                 phenotypes$META.POOP.BristolMean + 
+                                 phenotypes$META.POOP.Freq +
+                                 phenotypes$MED.MEDS.PPIs_ATC_A02BC + #newly added
+                                 phenotypes[,model_3[i]] +
+                                 phenotypes$CURRENT_TREATMENT.Mental_Health)
+                sum1 = summary(lm1)
+                PTD_result = sum1$coef[nrow(sum1$coef),]
+                disease_result = sum1$coef[nrow(sum1$coef)-1,]  
+                data.frame(alpha_diversity = colnames(alpha_transformed)[j],
+                           factor = model_3[i],
+                           drug = "PTD",
+                           factor_coefficient = disease_result[1],
+                           factor_SE = disease_result[2],
+                           factor_T_statistic = disease_result[3],
+                           factor_P_value = disease_result[4],
+                           PTD_coefficient = PTD_result[1],
+                           PTD_SE = PTD_result[2],
+                           PTD_T_statistic = PTD_result[3],
+                           PTD_P_value = PTD_result[4])
+        }
+
+
+dim(model_3_alpha)
+#27  11  (3 indeces * 9 (7x internalizing disorders, 2x internalizing traits/states))
+
+#study-wise FDR
+model_3_alpha$factor_FDR = p.adjust(model_3_alpha$factor_P_value, method = "BH")
+sum(model_3_alpha$factor_FDR<0.05)
+#0
+sum(model_3_alpha$factor_P_value<0.05)
+#3
+
+pvalue <- model_3_alpha %>%
+        filter(factor_P_value <0.05)
+#alpha diversity is nominally significantly decreased in LTMDD participants for all indeces, when adjusted for all psychotropic drugs (PTD)
+
+model_3_alpha$PTD_FDR = p.adjust(model_3_alpha$PTD_P_value, method = "BH")
+sum(model_3_alpha$PTD_FDR<0.05)
+#0
+sum(model_3_alpha$PTD_P_value<0.05)
+#0
+
+write.table(model_3_alpha, "alpha_disease_asscns_study_wide_PTD_adjusted.txt", sep="\t", row.names=F, quote = F) 
+
