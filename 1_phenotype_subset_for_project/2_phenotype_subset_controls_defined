@@ -18,6 +18,8 @@
 library(tidyverse)
 library(UpSetR)
 
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile_subset
+
         ## =============== 0. LOAD DATA   ================ ##
 
 phenotypes = read.csv("27.08.2021_transformed_phenotypes.csv", header=T, as.is=T, sep=",", row.names = 1)
