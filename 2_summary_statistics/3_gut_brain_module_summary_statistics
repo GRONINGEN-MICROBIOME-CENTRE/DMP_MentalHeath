@@ -1,0 +1,273 @@
+#start interactive session on the cluster:  srun --cpus-per-task=1 --mem=20gb --nodes=1 --qos=interactive --time=04:00:00 --pty bash -i
+#load R module:                             ml RPlus
+#start R (R version 4.0.3 (2020-10-10):     R
+
+#gut brain modules
+
+##Contents of this file
+
+## 0. LOAD DATA
+## 1.
+
+library(tidyverse)
+
+        ## =============== 0. LOAD DATA   ================ ##
+
+phenotypes = read.csv("27.08.2021_transformed_phenotypes_control.csv", header=T, as.is=T, sep=",", row.names = 1)
+dim(phenotypes)
+# 7656  236
+
+#GBM file (created by Cas and Arnau)
+GBM <- read.delim("DAG3_abundance_GBM.txt")
+dim(GBM)
+#8606   50
+
+#make first column,'ID' the row names of metaphlan dataset
+rownames(GBM) = GBM[,1]
+
+#remove ID columns and all samples begining with "MXX..." (test samples)
+GBM = GBM[,-1]
+dim(GBM)
+#8606   49
+
+#remove "_kneaddata_cleaned_paired_merged_Abundance.RPKs" from DAG3_ID to be able to intersect with phenotype data
+rownames(GBM) = str_remove(rownames(GBM), "_kneaddata_cleaned_paired_merged_Abundance.RPKs")
+rownames(GBM)
+GBM <- GBM[ order(row.names(GBM)), ]
+#some participants have an added code after their ID, for example: LL93_A10_8499_FDME190250549.1a_HYWYWCCXY_L4; remove from FDME onwards
+rownames(GBM) <- gsub("^_F", "", rownames(GBM))
+
+#intersect metaphlan data with phenotype data
+samples = intersect(rownames(GBM), phenotypes$DAG3_sampleID)
+length(samples)
+#7632
+
+GBM = GBM[samples,]
+dim(GBM)
+#7632 49
+
+        ## =============== 1. MAKE DATA FRAMES FOR SUMMARY STATISTICS   ================ ##
+
+        #1. control
+controls <- phenotypes %>% filter (
+        MDD_control == "control")
+#5522  236
+
+samples = intersect(rownames(GBM), controls$DAG3_sampleID)
+length(samples)
+#5503
+
+GBM_controls = GBM[samples,]
+dim(GBM_controls)
+# 5503  49
+
+        #2. AnyDep
+AnyDep <- phenotypes %>% filter (
+        AnyDep_control == "any_current_dep")
+#226  236
+
+samples = intersect(rownames(GBM), AnyDep$DAG3_sampleID)
+length(samples)
+#225
+
+GBM_AnyDep = GBM[samples,]
+dim(GBM_AnyDep)
+#225  49
+
+        #3. DYS
+DYS <- phenotypes %>% filter (
+        DYS_control == "current_DYS")
+#70  236
+
+samples = intersect(rownames(GBM), DYS$DAG3_sampleID)
+length(samples)
+#70
+
+GBM_DYS = GBM[samples,]
+dim(GBM_DYS)
+#70  49
+
+        #4. MDD
+MDD <- phenotypes %>% filter (
+        MDD_control == "current_MDD")
+#156  236
+
+samples = intersect(rownames(GBM), MDD$DAG3_sampleID)
+length(samples)
+#155
+
+GBM_MDD = GBM[samples,]
+dim(GBM_MDD)
+#155  49
+
+        #5. LTMDD
+LTMDD <- phenotypes %>% filter (
+        LTMDDonly_control == "lifetime_MDD_only")
+#749  236
+
+samples = intersect(rownames(GBM), LTMDD$DAG3_sampleID)
+length(samples)
+#749
+
+GBM_LTMDD = GBM[samples,]
+dim(GBM_LTMDD)
+#749  49
+
+        #6. AnyAnx
+AnyAnx <- phenotypes %>% filter (
+        AnyAnx_control == "any_current_anx")
+#385  236
+
+samples = intersect(rownames(GBM), AnyAnx$DAG3_sampleID)
+length(samples)
+#384
+
+GBM_AnyAnx = GBM[samples,]
+dim(GBM_AnyAnx)
+#384  49
+
+        #7. GAD
+GAD <- phenotypes %>% filter (
+        GAD_control == "current_GAD")
+#339  236
+
+samples = intersect(rownames(GBM), GAD$DAG3_sampleID)
+length(samples)
+#338
+
+GBM_GAD = GBM[samples,]
+dim(GBM_GAD)
+#338  49
+
+        #8. LTGAD
+LTGAD <- phenotypes %>% filter (
+        LTGADonly_control == "lifetime_GAD_only")
+#243  236
+
+samples = intersect(rownames(GBM), LTGAD$DAG3_sampleID)
+length(samples)
+#243
+
+GBM_LTGAD = GBM [samples,]
+dim(GBM_LTGAD)
+#243  49
+
+        ## =============== 2. GBM SUMMARY STATISTICS   ================ ##
+
+        #calculate summary stats for:
+
+        #a. entire population
+new_df <- as.data.frame(t(GBM))
+#49 7632
+summary_stats_population <- data.frame(population_mean = apply(new_df, 1, function(x) {mean(x)}))
+summary_stats_population$population_sd <- apply(new_df, 1, function(x) {sd(x)})
+
+#to obtain presence we need to change values > 0 to 1, and then sum each row
+population_presence <- new_df
+population_presence[new_df>0] <- 1
+summary_stats_population$population_presence <- apply(population_presence, 1, function(x) {sum(x)})
+summary_stats_population$gbm <- rownames(summary_stats_population) #for merging with other data frames
+
+        #1. control
+new_df <- as.data.frame(t(GBM_controls))
+#49 5503
+summary_stats_control <- data.frame(control_mean = apply(new_df, 1, function(x) {mean(x)}))
+summary_stats_control$control_sd <- apply(new_df, 1, function(x) {sd(x)})
+
+#to obtain presence we need to change values > 0 to 1, and then sum each row
+control_presence <- new_df
+control_presence[new_df>0] <- 1
+summary_stats_control$control_presence <- apply(control_presence, 1, function(x) {sum(x)})
+summary_stats_control$gbm <- rownames(summary_stats_control) 
+
+        #2. AnyDep
+new_df <- as.data.frame(t(GBM_AnyDep))
+summary_stats_anydep <- data.frame(anydep_mean = apply(new_df, 1, function(x) {mean(x)}))
+summary_stats_anydep$anydep_sd <- apply(new_df, 1, function(x) {sd(x)})
+
+#to obtain presence we need to change values > 0 to 1, and then sum each row
+anydep_presence <- new_df
+anydep_presence[new_df>0] <- 1
+summary_stats_anydep$anydep_presence <- apply(anydep_presence, 1, function(x) {sum(x)})
+summary_stats_anydep$gbm <- rownames(summary_stats_anydep) 
+
+        #3. DYS
+new_df <- as.data.frame(t(GBM_DYS))
+summary_stats_dys <- data.frame(dys_mean = apply(new_df, 1, function(x) {mean(x)}))
+summary_stats_dys$dys_sd <- apply(new_df, 1, function(x) {sd(x)})
+
+#to obtain presence we need to change values > 0 to 1, and then sum each row
+dys_presence <- new_df
+dys_presence[new_df>0] <- 1
+summary_stats_dys$dys_presence <- apply(dys_presence, 1, function(x) {sum(x)})
+summary_stats_dys$gbm <- rownames(summary_stats_dys) 
+
+        #4. MDD
+new_df <- as.data.frame(t(GBM_MDD))
+summary_stats_mdd <- data.frame(mdd_mean = apply(new_df, 1, function(x) {mean(x)}))
+summary_stats_mdd$mdd_sd <- apply(new_df, 1, function(x) {sd(x)})
+
+#to obtain presence we need to change values > 0 to 1, and then sum each row
+mdd_presence <- new_df
+mdd_presence[new_df>0] <- 1
+summary_stats_mdd$mdd_presence <- apply(mdd_presence, 1, function(x) {sum(x)})
+summary_stats_mdd$gbm <- rownames(summary_stats_mdd) 
+
+        #5. LTMDD
+new_df <- as.data.frame(t(GBM_LTMDD))
+summary_stats_ltmdd <- data.frame(ltmdd_mean = apply(new_df, 1, function(x) {mean(x)}))
+summary_stats_ltmdd$ltmdd_sd <- apply(new_df, 1, function(x) {sd(x)})
+
+#to obtain presence we need to change values > 0 to 1, and then sum each row
+ltmdd_presence <- new_df
+ltmdd_presence[new_df>0] <- 1
+summary_stats_ltmdd$ltmdd_presence <- apply(ltmdd_presence, 1, function(x) {sum(x)})
+summary_stats_ltmdd$gbm <- rownames(summary_stats_ltmdd) 
+
+        #6. AnyAnx
+new_df <- as.data.frame(t(GBM_AnyAnx))
+summary_stats_anyanx <- data.frame(anyanx_mean = apply(new_df, 1, function(x) {mean(x)}))
+summary_stats_anyanx$anyanx_sd <- apply(new_df, 1, function(x) {sd(x)})
+
+#to obtain presence we need to change values > 0 to 1, and then sum each row
+anyanx_presence <- new_df
+anyanx_presence[new_df>0] <- 1
+summary_stats_anyanx$anyanx_presence <- apply(anyanx_presence, 1, function(x) {sum(x)})
+summary_stats_anyanx$gbm <- rownames(summary_stats_anyanx) 
+
+        #7. GAD
+new_df <- as.data.frame(t(GBM_GAD))
+summary_stats_gad <- data.frame(gad_mean = apply(new_df, 1, function(x) {mean(x)}))
+summary_stats_gad$gad_sd <- apply(new_df, 1, function(x) {sd(x)})
+
+#to obtain presence we need to change values > 0 to 1, and then sum each row
+gad_presence <- new_df
+gad_presence[new_df>0] <- 1
+summary_stats_gad$gad_presence <- apply(gad_presence, 1, function(x) {sum(x)})
+summary_stats_gad$gbm <- rownames(summary_stats_gad) 
+
+        #8. LTGAD
+new_df <- as.data.frame(t(GBM_LTGAD))
+summary_stats_ltgad <- data.frame(ltgad_mean = apply(new_df, 1, function(x) {mean(x)}))
+summary_stats_ltgad$ltgad_sd <- apply(new_df, 1, function(x) {sd(x)})
+
+#to obtain presence we need to change values > 0 to 1, and then sum each row
+ltgad_presence <- new_df
+ltgad_presence[new_df>0] <- 1
+summary_stats_ltgad$ltgad_presence <- apply(ltgad_presence, 1, function(x) {sum(x)})
+summary_stats_ltgad$gbm <- rownames(summary_stats_ltgad) 
+
+#9. MERGE population, control and disorder summary stats by gbm
+summary_stats_gbm <- list(summary_stats_population, summary_stats_control, 
+                          summary_stats_anydep, summary_stats_dys, summary_stats_mdd, summary_stats_ltmdd,
+                          summary_stats_anyanx, summary_stats_gad, summary_stats_ltgad)
+summary_stats_gbm <- summary_stats_gbm %>% reduce(full_join, by= "gbm")
+colnames(summary_stats_gbm)
+
+#reorder
+summary_stats_gbm <- as.data.frame(summary_stats_gbm[,c(4, 1:3, 5:28)])
+#49   28
+
+#write table
+write.table(summary_stats_gbm, "summary_stats_gbm_by_disorder.txt")
+write.csv(summary_stats_gbm, "summary_stats_gbm_by_disorder.csv")
