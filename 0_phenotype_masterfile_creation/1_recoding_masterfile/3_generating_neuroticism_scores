@@ -1,0 +1,73 @@
+###     SCRIPT: NEO_NEUROTICISM SCORE
+###     AUTHOR(S): SIOBHAN BRUSHETT (AND LJS Schweren?)
+###     DESCRIPTION: GENERATION OF NEO NEUROTICISM SCORES
+###     PROJECT: PSYCH-MICROBIOME
+###     NOTE(S): ALREADY DERIVED VALUES OF NEO_NEUROTICISM FACETS WERE USED AS OUTLINED IN
+###              'adult_personality_DESCRIPTION_final.pdf' AVAILABLE ON CLUSTER
+
+##Contents of this file
+
+## 0. LOAD DATA
+## 1. CALCULATE NEUROTICISM SUBSCALE
+## 2. CREATE SUBSET AND MERGE WITH MASTERFILE
+
+        ## =============== 0. LOAD DATA   ================ ##
+
+##Gearshift location
+#cd /groups/umcg-lifelines/tmp01/releases/pheno_lifelines_restructured/v1/adult_personality/data
+
+neo = read.csv("adult_personality_OUTPUT.csv", header=T, as.is=T, sep=",")
+dim(neo)
+# 133983     56
+
+        ## =============== 1. CALCULATE NEUROTICISM SUBSCALE   ================ ##
+
+        ##NEUROTIICISM COMPLETE DOMAIN (ALL 6 FACECTS)
+
+neuro_complete <- c("A_SUM1", "ANX_SUM1", "DEP_SUM1", "SC_SUM1", "I_SUM1", "V_SUM1")
+
+neo$NA_neu <- apply(is.na(neo[,neuro_complete]), 1, sum)
+
+neo$neu_complete_1a <- apply(neo[,neuro_complete], 1, sum, na.rm=T)
+neo$neu_complete_1a[neo$NA_neu>=1] <- NA
+
+table(neo$neu_complete_1a, useNA="ifany")
+#NA's: 91146
+###THEREFORE, 133983 - 91146 == 42837
+#(Hanna's paper cites n = 42658)
+
+
+        ##NEUROTIICISM PARTIAL DOMAIN (ONLY 4 FACECTS; EXCLUDES ANXIETY AND DEPRESSION FACETS 
+        ##(in relation to history of Lifelines questionnaires))
+
+neuro_partial <- c("A_SUM1", "SC_SUM1", "I_SUM1", "V_SUM1")
+
+neo$NA_neu <- apply(is.na(neo[,neuro_partial]), 1, sum)
+
+neo$neuro_partial_1a <- apply(neo[,neuro_partial], 1, sum, na.rm=T)
+neo$neuro_partial_1a[neo$NA_neu>=1] <- NA
+
+table(neo$neuro_partial_1a, useNA="ifany")
+##NA's: 3898
+
+        ## =============== CREATE SUBSET AND MERGE WITH MASTERFILE   ================ ##
+
+mydata_neo <- subset(neo, select = c("PSEUDOIDEXT", "VMID", "neu_complete_1a", "neuro_partial_1a"))
+
+length(unique(mydata_neo$PSEUDOIDEXT))
+#133983
+
+write.csv(mydata_neo, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/WorkingDirectory/18.05.2021_Neo_neuro.csv")
+
+library(tidyverse)
+neo = read.csv("18.05.2021_Neo_neuro.csv", header = T, as.is=T, sep=",")
+masterfile = read.csv("18.05.2021_Masterfile_rec_sym_PANAS.csv", header=T, as.is=T, sep=",")
+
+masterfile_neo = left_join(masterfile, neo, by="PSEUDOIDEXT")
+
+dim(masterfile_neo)
+#154780 449
+colnames(masterfile_neo)
+
+write.csv(masterfile_neo, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/WorkingDirectory/18.05.2021_Masterfile_rec_sym_PANAS_NEO.csv")
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile

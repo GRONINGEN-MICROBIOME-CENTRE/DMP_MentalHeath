@@ -1,0 +1,247 @@
+#heat map for unadjusted taxa
+
+#libraries
+library(tidyverse)
+library(RColorBrewer)
+library(ComplexHeatmap)
+
+#resources: 
+#https://r-graph-gallery.com/215-the-heatmap-function.html
+#https://www.youtube.com/watch?v=qMWLfoqoico
+#https://jokergoo.github.io/ComplexHeatmap-reference/book/
+
+#read in taxa association output for unadjusted model
+unadj <- read.delim("taxa_asscns_study_wide_unadjusted.txt",
+        stringsAsFactors = T)
+str(unadj)
+
+#create dataframe subsets based on factor
+        #AnyDep
+AnyDep <- unadj %>%
+        filter(factor == "AnyDep_control")
+str(AnyDep)
+
+AnyDep <- rename (AnyDep,
+                  c (AnyDep_coefficient = coefficient,
+                     AnyDep_FDR = FDR))
+colnames(AnyDep)
+AnyDep <- AnyDep[,c("taxon", "AnyDep_coefficient", "AnyDep_FDR")]
+str(AnyDep)
+#373 3
+        #MDD
+DYS <- unadj %>%
+        filter(factor == "DYS_control")
+str(DYS)
+
+DYS <- rename (DYS,
+               c (DYS_coefficient = coefficient,
+                  DYS_FDR = FDR))
+
+colnames(DYS)
+DYS <- DYS[,c("taxon", "DYS_coefficient", "DYS_FDR")]
+str(DYS)
+#373 3
+
+        #MDD
+MDD <- unadj %>%
+        filter(factor == "MDD_control")
+str(MDD)
+
+MDD <- rename (MDD,
+               c (MDD_coefficient = coefficient,
+                  MDD_FDR = FDR))
+
+colnames(MDD)
+MDD <- MDD[,c("taxon", "MDD_coefficient", "MDD_FDR")]
+str(MDD)
+#373 3
+
+        #LTMDD
+LTMDD <- unadj %>%
+        filter(factor == "LTMDDonly_control")
+str(LTMDD)
+
+LTMDD <- rename (LTMDD,
+               c (LTMDD_coefficient = coefficient,
+                  LTMDD_FDR = FDR))
+
+colnames(LTMDD)
+LTMDD <- LTMDD[,c("taxon", "LTMDD_coefficient", "LTMDD_FDR")]
+str(LTMDD)
+#373 3
+
+        #AnyAnx
+AnyAnx <- unadj %>%
+        filter(factor == "AnyAnx_control")
+str(AnyAnx)
+
+AnyAnx <- rename (AnyAnx,
+                 c (AnyAnx_coefficient = coefficient,
+                    AnyAnx_FDR = FDR))
+
+colnames(AnyAnx)
+AnyAnx <- AnyAnx[,c("taxon", "AnyAnx_coefficient", "AnyAnx_FDR")]
+str(AnyAnx)
+#373 3
+
+        #GAD
+GAD <- unadj %>%
+        filter(factor == "GAD_control")
+str(GAD)
+
+GAD <- rename (GAD,
+               c (GAD_coefficient = coefficient,
+                  GAD_FDR = FDR))
+
+colnames(GAD)
+GAD <- GAD[,c("taxon", "GAD_coefficient", "GAD_FDR")]
+str(GAD)
+
+        #LTGAD
+LTGAD <- unadj %>%
+        filter(factor == "LTGADonly_control")
+str(LTGAD)
+
+LTGAD <- rename (LTGAD,
+               c (LTGAD_coefficient = coefficient,
+                  LTGAD_FDR = FDR))
+
+colnames(LTGAD)
+LTGAD <- LTGAD[,c("taxon", "LTGAD_coefficient", "LTGAD_FDR")]
+str(LTGAD)
+
+        #Neuroticism
+#NEO <- unadj %>%
+#        filter(factor == "NEO.Neuroticism_Complete_1a_tran")
+#str(NEO)
+
+#NEO <- rename (NEO,
+#                 c (Neuroticism_transformed_coefficient = coefficient,
+#                    Neuroticism_transformed_FDR = FDR))
+
+#colnames(NEO)
+#NEO <- NEO[,c("taxon", "Neuroticism_transformed_coefficient", "Neuroticism_transformed_FDR")]
+#str(NEO)
+
+        #NegAff
+#NegAff <- unadj %>%
+#        filter(factor == "PANAS.Negative_Affect_2b_tran")
+#str(NegAff)
+
+#NegAff <- rename (NegAff,
+#               c (NegAff_transformed_coefficient = coefficient,
+#                  NegAff_transformed_FDR = FDR))
+
+#colnames(NegAff)
+#NegAff <- NegAff[,c("taxon", "NegAff_transformed_coefficient", "NegAff_transformed_FDR")]
+#str(NegAff)
+
+        #SSRIs
+SSRIs <- unadj %>%
+        filter(factor == "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB")
+str(SSRIs)
+
+SSRIs <- rename (SSRIs,
+                  c (SSRI_coefficient = coefficient,
+                     SSRI_FDR = FDR))
+
+colnames(SSRIs)
+SSRIs <- SSRIs[,c("taxon", "SSRI_coefficient", "SSRI_FDR")]
+str(SSRIs)
+
+        #PTDs
+PTDs <- unadj %>%
+        filter(factor == "CURRENT_TREATMENT.Mental_Health")
+str(PTDs)
+
+PTDs <- rename (PTDs,
+                 c (PTD_coefficient = coefficient,
+                    PTD_FDR = FDR))
+
+colnames(PTDs)
+PTDs <- PTDs[,c("taxon", "PTD_coefficient", "PTD_FDR")]
+str(PTDs)
+
+        #merge by taxon
+unadj_taxa <- list(AnyDep, DYS, MDD, LTMDD,
+                   AnyAnx, GAD, LTGAD,
+                   #NEO, NegAff,
+                   SSRIs, PTDs)
+
+unadj_taxa <- unadj_taxa %>% reduce(full_join, by= "taxon")
+str(unadj_taxa)
+#373 19
+
+#condition 1 on FDR<0.05 (OR statements)
+unadj_group <- unadj_taxa %>%
+        filter(AnyDep_FDR <0.05 |
+                       DYS_FDR <0.05 |
+                       MDD_FDR <0.05 |
+                       LTMDD_FDR <0.05 |
+                       AnyAnx_FDR <0.05 |
+                       GAD_FDR <0.05 |
+                       LTGAD_FDR <0.05 |
+                       #Neuroticism_transformed_FDR <0.05 |
+                       #NegAff_transformed_FDR <0.05 |
+                       SSRI_FDR <0.05 |
+                       PTD_FDR <0.05)
+dim(unadj_group)
+#60 19
+
+#condition 2 on species level taxa only
+#remove characters until the last order/level of taxon
+unadj_group$taxon <- sub(".+[|]", "",unadj_group$taxon)
+#keep only spp level taxa
+unadj_group <- unadj_group[grepl("^s",unadj_group$taxon),]
+dim(unadj_group)
+str(unadj_group)
+#25 19
+
+#reorder dataframe for coefficients first and then FDR values
+unadj_group_reord <- unadj_group[,c(1:2, 4, 6, 8, 10, 12, 14, 16, 18,
+                        3, 5, 7, 9, 11, 13, 15, 17, 19)]
+
+str(unadj_group_reord)
+
+#make taxon, first column, row name
+rownames(unadj_group_reord) = unadj_group_reord[,1]
+#remove taxon from first column
+unadj_group_reord = unadj_group_reord[,-1]
+
+#transpose dataframe
+unadj_group_t <- t(unadj_group_reord)
+
+#write unadj_group_t and manually add colour grouping
+write.table(unadj_group_t, "unadjusted_heatmap_format.txt", sep="\t", row.names=T, quote = F) 
+
+#read in file manually updated with colour grouping
+taxa_unadj <- read.delim("unadjusted_heatmap_format_col.txt")
+str(taxa_unadj)
+
+#make factor, first column, row name
+rownames(taxa_unadj) <-  taxa_unadj[,1]
+#remove factor from first column
+taxa_unadj <- taxa_unadj[,-1]
+
+#remove FDR rows as not needed for heatmap
+taxa_unadj_hp <- taxa_unadj[c(1:9), c(1:25)]
+taxa_unadj_hp <- as.matrix(taxa_unadj_hp)
+str(taxa_unadj_hp)
+
+#do similarly for colour grouping
+#taxa_unadj_col <- taxa_unadj[c(1:11), c(1:27)]
+#str(taxa_unadj_col)
+
+#colour of main heatmap
+col1 <- colorRampPalette(colors=c("#ff9933", "#ffffff")) (15) [1:14]
+col2 <- colorRampPalette(colors=c("#ffffff", "#6600cc")) (15)
+
+pdf(file = "taxa_heatmap_unadj.pdf", width = 12, height =6, useDingbats = F)
+#par(oma=c(8,5,5,5)) # all sides have 5 lines of space
+#par(mar=c(8,6,6,6) + 0.1)
+
+Heatmap(taxa_unadj_hp, name = "beta coefficients", 
+        col = c(col1, col2),
+        row_names_gp = gpar(fontsize = 8),
+        column_names_gp = gpar(fontsize = 8))
+dev.off()    

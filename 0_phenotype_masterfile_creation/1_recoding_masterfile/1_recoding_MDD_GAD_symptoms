@@ -1,0 +1,96 @@
+###     SCRIPT: MDD_GAD_sym_sum
+###     AUTHOR(S): SIOBHAN BRUSHETT (AND LIAN)
+###     DESCRIPTION: CREATION OF SYMPTOMS SCORES FOR MDD AND GAD BASED ON MINI CRITERIA - WAVE 2 ONLY!
+###     PROJECT: PSYCH-MICROBIOME
+###     NOTE(S): SCORES FOR THESE VARIABLES ARE ONLY APPLICABLE FOR WAVE 2 MINI VARIABLES AS
+###     WAVE 1 MINI VARIABLES ARE CODED DIFFERENTLY
+
+##Contents of this file
+
+## 0. LOAD DATA
+## 1. CURRENT_MDD_SYMPTOMS_SUM_SCORE (wave 2)  
+## 2. CURRENT_GAD_SYMPTOMS_SUM_SCORE (wave 2)
+ 
+
+        ## =============== 0. LOAD DATA   ================ ##
+masterfile <- read.csv("11.05.2021_Masterfile_rec.csv", header=T, as.is=T, sep=",")
+dim(masterfile)
+#154780    435
+
+        ## =============== 1. CURRENT_MDD_SYMPTOMS_SUM_SCORE (wave 2)   ================ ##
+
+### Recoding of A3A and A3C variables, to have a total of 9 variables for MDD Symptoms ###
+
+## A3A
+# appetite changed (mini_mdd_sym_c3a_2a) OR weight increased (mini_mdd_sym_c3b_2a) OR weight decreased without intention (mini_mdd_sym_c3c_2a)
+
+masterfile$mini_mdd_sym_c3_2a <- NA
+masterfile$mini_mdd_sym_c3_2a <- ifelse ( (masterfile$mini_mdd_sym_c3a_2a==1 | masterfile$mini_mdd_sym_c3b_2a==1 | masterfile$mini_mdd_sym_c3c_2a == 1) , 1, 0)
+table(masterfile$mini_mdd_sym_c3_2a, useNA="ifany")
+#0     1  <NA>
+#83011  8640 63129
+
+
+## A3C
+# slower (mini_mdd_sym_c5a_2a) almost every day (mini_mdd_sym_c5b_2a) OR restless (mini_mdd_sym_c5c_2a) every day (mini_mdd_sym_c5d_2a) 
+masterfile$mini_mdd_sym_c5_2a <- NA
+masterfile$mini_mdd_sym_c5_2a <- ifelse ( (masterfile$mini_mdd_sym_c5a_2a == 1 & masterfile$mini_mdd_sym_c5b_2a == 1) | (masterfile$mini_mdd_sym_c5c_2a == 1 & masterfile$mini_mdd_sym_c5d_2a == 1), 1, 0 )
+table(masterfile$mini_mdd_sym_c5_2a, useNA="ifany")
+
+#0     1  <NA>
+#86702  4947 63131
+
+masterfile$mini_mdd_sym_c1_2a[masterfile$mini_mdd_sym_c1_2a == 2] <-0
+masterfile$mini_mdd_sym_c2_2a[masterfile$mini_mdd_sym_c2_2a == 2] <-0
+masterfile$mini_mdd_sym_c4_2a[masterfile$mini_mdd_sym_c4_2a == 2] <-0
+masterfile$mini_mdd_sym_c6_2a[masterfile$mini_mdd_sym_c6_2a == 2] <-0
+masterfile$mini_mdd_sym_c7_2a[masterfile$mini_mdd_sym_c7_2a == 2] <-0
+masterfile$mini_mdd_sym_c8_2a[masterfile$mini_mdd_sym_c8_2a == 2] <-0
+masterfile$mini_mdd_sym_c9_2a[masterfile$mini_mdd_sym_c9_2a == 2] <-0
+
+mdd_symp_sum <- c("mini_mdd_sym_c1_2a", "mini_mdd_sym_c2_2a", "mini_mdd_sym_c3_2a", "mini_mdd_sym_c4_2a", "mini_mdd_sym_c5_2a", "mini_mdd_sym_c6_2a",
+                  "mini_mdd_sym_c7_2a", "mini_mdd_sym_c8_2a", "mini_mdd_sym_c9_2a")
+
+masterfile$NA_mdd_symp_sum             <- apply(is.na(masterfile[,mdd_symp_sum]),1,sum)
+masterfile$mdd_symp_sum                <- apply(masterfile[,mdd_symp_sum],1,sum,na.rm=TRUE) 
+masterfile$mdd_symp_sum[masterfile$NA_mdd_symp_sum>=1] <-  NA
+
+table(masterfile$mdd_symp_sum, useNA="ifany")
+
+#0     1     2     3     4     5     6     7     8     9  <NA>
+#59846 17550  6188  3123  1845  1211   892   543   333   118 63131
+
+
+        ## =============== 1. CURRENT_GAD_SYMPTOMS_SUM_SCORE (wave 2)   ================ ##
+
+### Recoding of O1A, O1B and O2 variables, to have a total of 7 variables for GAD_Symptoms ###
+
+#excessive worry (mini_gad_sym_c1a_2a) AND frequency of excessive worry (mini_gad_sym_c1b_2a) AND inability to control worry/anxiety (mini_gad_sym_c1c_2a)
+
+masterfile$mini_gad_sym_c1_2a <- NA
+masterfile$mini_gad_sym_c1_2a <- ifelse ( (masterfile$mini_gad_sym_c1a_2a==1 & masterfile$mini_gad_sym_c1b_2a==1 & masterfile$mini_gad_sym_c1c_2a == 1), 1 , 0) 
+table(masterfile$mini_gad_sym_c1_2a, useNA="ifany")
+
+#0     1  <NA>
+#85547  6103 63130
+
+masterfile$mini_gad_sym_c2_2a[masterfile$mini_gad_sym_c2_2a == 2] <-0
+masterfile$mini_gad_sym_c3_2a[masterfile$mini_gad_sym_c3_2a == 2] <-0
+masterfile$mini_gad_sym_c4_2a[masterfile$mini_gad_sym_c4_2a == 2] <-0
+masterfile$mini_gad_sym_c5_2a[masterfile$mini_gad_sym_c5_2a == 2] <-0
+masterfile$mini_gad_sym_c6_2a[masterfile$mini_gad_sym_c6_2a == 2] <-0
+masterfile$mini_gad_sym_c7_2a[masterfile$mini_gad_sym_c7_2a == 2] <-0
+
+gad_symp_sum <- c("mini_gad_sym_c1_2a", "mini_gad_sym_c2_2a", "mini_gad_sym_c3_2a", "mini_gad_sym_c4_2a",
+                  "mini_gad_sym_c5_2a", "mini_gad_sym_c6_2a", "mini_gad_sym_c7_2a")
+
+masterfile$NA_gad_symp_sum             <- apply(is.na(masterfile[,gad_symp_sum]),1,sum)
+masterfile$gad_symp_sum                <- apply(masterfile[,gad_symp_sum],1,sum,na.rm=TRUE) 
+masterfile$gad_symp_sum[masterfile$NA_gad_symp_sum>=1] <-  NA
+
+table(masterfile$gad_symp_sum, useNA="ifany")
+#    0     1     2     3     4     5     6     7  <NA>
+#48333 14332  8514  6212  4799  3767  3447  2246 63130
+
+write.csv(masterfile, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/WorkingDirectory/18.05.2021_Masterfile_rec_sym.csv")
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile

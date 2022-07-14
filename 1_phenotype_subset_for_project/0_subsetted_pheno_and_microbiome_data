@@ -1,0 +1,172 @@
+###     SCRIPT: PSYCH-MICROBIOME SUB-SETTED FILES
+###     AUTHOR(S): SIOBHAN BRUSHETT 
+###     DESCRIPTION: SUBSET OF PSYCH-MICROBIOME PHENOTYPE FILE AND MATCHING TO HIGH QUALITY DAG3 MICROBIOME FILES
+###     PROJECT: PSYCH-MICROBIOME
+###     NOTE(S): CRITERIA FOR SUBSETTING INDICATED IN SECTIONS 1 BELOW
+
+
+##Contents of this file
+
+## 0. LOAD DATA
+## 1. RECODE DATA FOR SUBSETTING CONDITIONS
+## 2. SORT PHENOTYPE DATA
+## 3. LIST OF PARTICIPANTS
+## 4. LIST OF DAG3 MICROBIOME PARTICIPANTS
+## 5. INTERSECTION OF PHENOTYPES AND MICROBIOME: LIST
+## 6. SUBSET PHENOTYPE DATA
+## 7. SUBSET MICROBIOME DATA
+
+
+library(tidyverse)
+
+        ## =============== 0. LOAD DATA   ================ ##
+
+masterfile <- read.csv("19.05.2021_Masterfile_psychmicro.csv", header=T, as.is=T, sep=",", row.names = 1)
+dim(masterfile)
+#8229  152
+
+
+        ## =============== 1. RECODE DATA FOR SUBSETTING CONDITIONS   ================ ##
+
+##RECODE SUM SCORES INTO YES/NO VARIABLE TO SET CONDITIONS FOR SUBSETTING
+
+#PRESENCE OF MDD SYMPTOM
+masterfile$MINI.MDD.Symp_2a <- 2
+masterfile$MINI.MDD.Symp_2a[!is.na(masterfile$MINI.MDD.Symp_Sum_2a)] <- 1
+table(masterfile$MINI.MDD.Symp_2a, useNA="ifany")
+#1      2
+#6647 1582
+
+#PRESENCE OF GAD SYMPTOM
+masterfile$MINI.GAD.Symp_2a <- 2
+masterfile$MINI.GAD.Symp_2a[!is.na(masterfile$MINI.GAD.Symp_Sum_2a)] <- 1
+table(masterfile$MINI.GAD.Symp_2a, useNA="ifany")
+#1 2
+#6647 1582
+
+#PRESENCE OF NEGATIVE AFFECT
+masterfile$PANAS.NA_2a <- 2
+masterfile$PANAS.NA_2a[!is.na(masterfile$PANAS.Negative_Affect_2b)] <- 1
+table(masterfile$PANAS.NA_2a, useNA="ifany")
+#1      2
+#3994 4235
+
+#PRESENCE OF NEUROTICISM_COMPLETE
+masterfile$NEO.NC_1a <- 2
+masterfile$NEO.NC_1a[!is.na(masterfile$NEO.Neuroticism_Complete_1a)] <- 1
+table(masterfile$NEO.NC_1a, useNA="ifany")
+#1      2
+#2469 5760
+
+#PRESENCE OF NEUROTICISM_PARTIAL
+masterfile$NEO.NP_1a <- 2
+masterfile$NEO.NP_1a[!is.na(masterfile$NEO.Neuroticism_Partial_1a)] <- 1
+table(masterfile$NEO.NP_1a, useNA="ifany")
+#1      2
+#6898 1331
+
+##RECODE BIONIC AGE OF ONSET TO ONLY INCLUDE PARTICIPANTS WITH AOO >14 YRS
+masterfile$BIONIC.DEP_AOO_cat = ifelse((masterfile$BIONIC.DEP_AOO > 14), 1, 2)
+table(masterfile$BIONIC.DEP_AOO_cat, useNA="ifany")
+#1      2 <NA>
+#843   56 7330
+
+        ## =============== 2. SORT PHENOTYPE DATA   ================ ##
+
+##CRITERIA. PARTICIPANTS RECORDED AN ANSWER TO ANY OF THE FOLLOWING VARIABLES:
+
+        #MINI.MDD_2a                    Any current major depressive disorder
+        #MINI.DYS_2a                    Any current dysthymia
+        #MINI.GAD_2a                    Any current generalized anxiety disorder
+        #MINI.PD_2a                     Any current panic disorder
+        #MINI.SPH_2a                    Any current soical phobia
+        #MINI.Any_Dep_2a                Any current depression
+        #MINI.Any_Anx_2a_RECODE         Any current anxiety - recoded to exclude AGPH (as this was not properly defined in Lifelines)
+        #MINI.MDD.Symp_2a               Any current depressive symptoms (YES OR NO)   
+        #MINI.GAD.Symp_2a               Any current generalized anxiety symptoms (YES OR NO)
+        #PANAS.NA_2a                    Current negative affect (YES OR NO)
+        #NEO.NC_1a                      Previous neuroticism trait (6 facets; YES OR NO)
+        #NEO.NP_1a                      Previous neuroticism trait (4 facets; YES OR NO)
+        #BIONIC.MDD_Lifetime            Any lifetime major depressive disorder
+        #BIONIC.MDD_Lifetime_severe     Any severe lifetime depression
+        #BIONIC.GAD_Lifetime            Any lifetime generalized anxiety disorder
+        #BIONIC.DEP_AOO_cat             AOO greater than 14 yrs of age
+
+subset_pheno <- filter(masterfile, MINI.MDD_2a == 1 | MINI.MDD_2a == 2|
+                               MINI.DYS_2a == 1 | MINI.DYS_2a == 2 |
+                               MINI.GAD_2a == 1 | MINI.GAD_2a == 2 |
+                               MINI.PD_2a == 1|MINI.PD_2a == 2 | 
+                               MINI.SPH_2a == 1 | MINI.SPH_2a == 2 |
+                               MINI.Any_Dep_2a ==1 | MINI.Any_Dep_2a == 2 |
+                               MINI.Any_Anx_2a_RECODE == 1 | MINI.Any_Anx_2a_RECODE == 2|
+                               MINI.MDD.Symp_2a == 1 | #because MINI.MDD_Symp_2a == 2 are NA's
+                               MINI.GAD.Symp_2a ==1 |  #because MINI.GAD_Symp_2a == 2 are NA's
+                               PANAS.NA_2a == 1 | #because PANAS.NA_2a == 2 are NA's
+                               NEO.NC_1a == 1 | #because NEO.NC_1a == 2 are NA's
+                               NEO.NP_1a ==1 | #because NEO.NP_1a == 2 are NA's
+                               BIONIC.MDD_Lifetime == 1 | BIONIC.MDD_Lifetime == 2|
+                               masterfile$BIONIC_1.MDD_Lifetime_severe == 1 | masterfile$BIONIC_1.MDD_Lifetime_severe == 2 | 
+                               BIONIC.GAD_Lifetime == 1 | BIONIC.GAD_Lifetime == 2 |
+                               BIONIC.DEP_AOO_cat ==1) #this is just a categorization of age, therefore the value 2 are participants <14 yrs, which is irrelevant for filtering
+
+dim(subset_pheno)
+#7676  158
+
+#order by ID
+subset_pheno_sort = subset_pheno[order(subset_pheno$DAG3_sampleID),]
+
+write.csv(subset_pheno_sort, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile/24.05.2021_Psychmicro_Pheno.csv")
+
+        ## =============== 3. LIST OF PARTICIPANTS   ================ ##
+
+participant = 1:7676
+psychmicro_participants = data.frame(participant, subset_pheno_sort$DAG3_sampleID)
+
+write.csv(psychmicro_participants, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile/24.05.2021_Psychmicro_participantIDs.csv")
+
+        
+        ## =============== 4. LIST OF DAG3 MICROBIOME PARTICIPANTS   ================ ##
+
+#GEARSHIFT LOCATION: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/DAG3_data_ready/microbiome_v27
+##LOCATION FOR HIGH QUALITY MICROBIOME READS
+
+microbiome = read.csv("/groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/DAG3_data_ready/microbiome_v27/microbiome_8208samples_rdy.csv", header=T, as.is=T, sep=",")
+dim(microbiome)
+#8208 1939
+
+micro_sort = microbiome[order(microbiome$ID),]
+
+participant = 1:8208
+micro_participants = data.frame(participant, micro_sort$ID)
+
+write.csv(micro_participants, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile/24.05.2021_DAG3micro_participantIDs.csv")
+
+        ## =============== 5. INTERSECTION OF PHENOTYPES AND MICROBIOME: LIST   ================ ##
+
+micro_participants <- read.csv("24.05.2021_DAG3micro_participantIDs.csv", header=T, as.is=T, sep=",")        
+
+micro = micro_participants$micro_sort.ID
+pheno = psychmicro_participants$subset_pheno_sort.DAG3_sampleID
+head(micro)
+head(pheno)
+pheno_micro <-  intersect(micro, pheno)
+str(pheno_micro)
+#1:7656
+
+write.csv(pheno_micro, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile/25.05.2021_pheno_micro_intersection.csv")
+write.csv(pheno_micro, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/DAG3/microbiome/25.05.2021_pheno_micro_intersection.csv")
+
+        ## =============== 6. SUBSET PHENOTYPE DATA   ================ ##
+
+##phenotype data (in different location on cluster to microbiome data)
+
+pheno_micro <- read.csv("25.05.2021_pheno_micro_intersection.csv", header=T, as.is=T, sep=",")
+pheno_micro <- pheno_micro %>% rename("DAG3_sampleID" ="x")
+pheno_micro <- pheno_micro[order(pheno_micro$DAG3_sampleID),]
+phenotypes <- left_join(pheno_micro, subset_pheno_sort, by = "DAG3_sampleID") 
+phenotypes <- subset(phenotypes, select=-X)
+dim(phenotypes)
+#7656 158
+
+write.csv(phenotypes, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile_subset/25.05.2021_phenotypes.csv")
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile_subset

@@ -1,0 +1,245 @@
+#start interactive session on the cluster:  srun --cpus-per-task=1 --mem=5gb --nodes=1 --qos=interactive --time=04:00:00 --pty bash -i
+#load R module:                             ml RPlus
+#start R (R version 4.0.3 (2020-10-10):     R
+
+###     SCRIPT: SUMMARY STATISTICS PSYCH-MICRO
+###     AUTHOR(S): SIOBHAN BRUSHETT 
+###     DESCRIPTION: BIVARIATE ANYLSIS OF PSYCH-MICROBIOME PHENOTYPE SUBSET
+###     PROJECT: PSYCH-MICROBIOME
+###     NOTE(S): http://www.sthda.com/english/wiki/correlation-matrix-a-quick-start-guide-to-analyze-format-and-visualize-a-correlation-matrix-using-r-software
+###              https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
+###              DYS HAS BEEN REMOVED AS ITS PRESENCE IS EXLCUSIVE TO THE PRESENCES OF MDD, THUS 
+###              ANY_DEPRESSION (WHICH ENCOMPASSES BOTH MDD AND DYS) ACCOUNTS FOR THIS (moreover, sample size for Dys
+###              is relatively small)
+###     UPDATE: 2022.02.10 - updated plot 2 to include antibiotics and changed label names for manuscript
+###     UPDATE: 2022.03.12 - updated plot 2 to include PPIs and changed label names for manuscript
+
+##Contents of this file
+
+## 0. LOAD DATA
+## 1. FACTORISE DATA
+## 2. SUBSET DATA
+## 3. MAKE DATA NUMERIC AND RENAME
+## 4. CORRELATION FUNCTION AND PLOT
+
+library(tidyverse)
+library(corrplot) #version 0.84 
+library(psych) #version 2.0.12
+
+        # =============== 0. LOAD DATA   ================ ##
+
+phenotypes = read.csv("27.08.2021_transformed_phenotypes_control.csv", header=T, as.is=T, sep=",", row.names = 1)
+dim(phenotypes)
+# 7656  236
+
+        # =============== 1. FACTORISE DATA   ================ ##
+#MDD
+phenotypes$MINI.MDD_2a_RECODE <- factor(phenotypes$MINI.MDD_2a_RECODE, levels=c("no_current_MDD", "current_MDD"))
+table(phenotypes$MINI.MDD_2a_RECODE, useNA = "ifany")
+
+#DYS
+phenotypes$MINI.DYS_2a_RECODE <- factor(phenotypes$MINI.DYS_2a_RECODE, levels=c("no_current_DYS", "current_DYS"))
+table(phenotypes$MINI.DYS_2a_RECODE, useNA = "ifany")
+#DYS = 70
+
+#AnyDep
+phenotypes$MINI.Any_Dep_2a_RECODE <- factor(phenotypes$MINI.Any_Dep_2a_RECODE, levels=c("no_current_dep", "any_current_dep"))
+table(phenotypes$MINI.Any_Dep_2a_RECODE, useNA = "ifany")
+#AnyDep = 226
+
+#LTMDDonly
+phenotypes$LTMDD_only <- factor(phenotypes$LTMDD_only, levels=c("no_lifetime_MDD_only", "lifetime_MDD_only"))
+table(phenotypes$LTMDD_only, useNA = "ifany")
+#LTMDDonly = 749
+
+#GAD
+phenotypes$MINI.GAD_2a_RECODE <- factor(phenotypes$MINI.GAD_2a_RECODE, levels=c("no_current_GAD", "current_GAD"))
+table(phenotypes$MINI.GAD_2a_RECODE, useNA = "ifany")
+#GAD = 339
+
+#AnyAnx control
+phenotypes$MINI.Any_Anx_2a_RECODE_1 <- factor(phenotypes$MINI.Any_Anx_2a_RECODE_1, levels=c("no_current_anx", "any_current_anx"))
+table(phenotypes$MINI.Any_Anx_2a_RECODE_1, useNA = "ifany")
+#AnyAnx = 385
+
+#LTGADonly
+phenotypes$LTGAD_only <- factor(phenotypes$LTGAD_only, levels=c("no_lifetime_GAD_only", "lifetime_GAD_only"))
+table(phenotypes$LTGAD_only, useNA = "ifany")
+#LTGADonly = 243
+
+#b. treatments
+
+#phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH <- as.factor(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+#table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH, useNA = "ifany")
+#N    Y
+#7633   23
+
+#phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05 <- as.factor(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+#table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05, useNA = "ifany")
+#N    Y
+#7617   39
+
+#phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06 <- as.factor(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+#table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06, useNA = "ifany")
+#N    Y
+#7623   33
+
+#phenotypes$MED.MEDS.Psycholeptics_ATC_N05 <- as.factor(phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+#table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05, useNA = "ifany")
+#N    Y
+#7637   19
+
+phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB <- as.factor(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB, useNA = "ifany")
+#N    Y
+#7422  234
+
+#phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA <- as.factor(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+#table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA, useNA = "ifany")
+#N    Y
+#7585   71
+
+phenotypes$CURRENT_TREATMENT.Mental_Health <- as.factor(phenotypes$CURRENT_TREATMENT.Mental_Health)
+table(phenotypes$CURRENT_TREATMENT.Mental_Health, useNA = "ifany")
+#N    Y
+#7283  373
+
+phenotypes$MED.MEDS.PPIs_ATC_A02BC <- as.factor(phenotypes$MED.MEDS.PPIs_ATC_A02BC)
+table(phenotypes$MED.MEDS.PPIs_ATC_A02BC, useNA = "ifany")
+#N    Y
+#7111  545
+
+#phenotypes$META.Antibiotics_3m <- as.factor(phenotypes$META.Antibiotics_3m)
+#table(phenotypes$META.Antibiotics_3m, useNA = "ifany")
+#N      Y    <NA>
+#5900  462   1294
+
+phenotypes$MED.MEDS.Antibacterials_ATC_J01 <- as.factor(phenotypes$MED.MEDS.Antibacterials_ATC_J01)
+table(phenotypes$MED.MEDS.Antibacterials_ATC_J01, useNA = "ifany")
+#N    Y
+#7606   50
+
+#c. others
+
+phenotypes$ANTHRO.Sex <- factor(phenotypes$ANTHRO.Sex, levels = c("M", "F"))
+str(phenotypes$ANTHRO.Sex)
+
+        # =============== 2. SUBSET DATA   ================ ##       
+#plot_1
+my_data_1 <- as.data.frame(phenotypes [ , c("ANTHRO.AGE",
+                                            "ANTHRO.Sex",
+                                            "ANTHRO.BMI",
+                                            "EXP.DIET.Scores.LLDietScore",
+                                            "MINI.Any_Dep_2a_RECODE",
+                                            "MINI.DYS_2a_RECODE",
+                                            "MINI.MDD_2a_RECODE",
+                                            "LTMDD_only",
+                                            "MINI.Any_Anx_2a_RECODE_1",
+                                            "MINI.GAD_2a_RECODE",
+                                            "LTGAD_only",
+                                            #"PANAS.Negative_Affect_2b",
+                                            #"NEO.Neuroticism_Complete_1a",
+                                            "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                            "CURRENT_TREATMENT.Mental_Health",
+                                            "MED.MEDS.PPIs_ATC_A02BC",
+                                            "MED.MEDS.Antibacterials_ATC_J01")])
+str(my_data_1)
+
+#plot_2
+my_data_2 <- as.data.frame(phenotypes [ , c("MINI.Any_Dep_2a_RECODE",
+                                            "MINI.DYS_2a_RECODE",
+                                            "MINI.MDD_2a_RECODE",
+                                            "LTMDD_only",
+                                            "MINI.Any_Anx_2a_RECODE_1",
+                                            "MINI.GAD_2a_RECODE",
+                                            "LTGAD_only",
+                                            "MED.MEDS.Antibacterials_ATC_J01",
+                                            "MED.MEDS.PPIs_ATC_A02BC",
+                                            "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                            "CURRENT_TREATMENT.Mental_Health")])
+str(my_data_2)
+        # =============== 3. MAKE DATA NUMERIC AND RENAME  ================ ##  
+
+#RECODING OF VARIABLES TO NUMERIC
+#plot_1
+for (i in 1:ncol(my_data_1)){my_data_1[,i] <- as.numeric(my_data_1[,i])}
+str(my_data_1)
+
+#RENAME VARIABLES
+my_data_1 <- my_data_1 %>% rename("Age" = "ANTHRO.AGE",
+                                  "Sex" = "ANTHRO.Sex",
+                                  "BMI" = "ANTHRO.BMI",
+                                  "Diet score" = "EXP.DIET.Scores.LLDietScore",
+                                  "AnyDep" = "MINI.Any_Dep_2a_RECODE",
+                                  "DYS" = "MINI.DYS_2a_RECODE",
+                                  "MDD" = "MINI.MDD_2a_RECODE",
+                                  "LT-MDD" = "LTMDD_only",
+                                  "AnyAnx" = "MINI.Any_Anx_2a_RECODE_1",
+                                  "GAD" = "MINI.GAD_2a_RECODE",
+                                  "LT-GAD" = "LTGAD_only",
+                                  #"Negative affect" = "PANAS.Negative_Affect_2b",
+                                  #"Neuroticism" = "NEO.Neuroticism_Complete_1a",
+                                  "SSRIs" = "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                  "PTDs" = "CURRENT_TREATMENT.Mental_Health",
+                                  "PPIs" = "MED.MEDS.PPIs_ATC_A02BC",
+                                  "Antibotic use" = "MED.MEDS.Antibacterials_ATC_J01")
+
+#plot_2
+for (i in 1:ncol(my_data_2)){my_data_2[,i] <- as.numeric(my_data_2[,i])}
+str(my_data_2)
+
+#RENAME VARIABLES
+my_data_2 <- my_data_2 %>% rename("AnyDep" = "MINI.Any_Dep_2a_RECODE",
+                                  "MDD" = "MINI.MDD_2a_RECODE",
+                                  "DYS" = "MINI.DYS_2a_RECODE",
+                                  "LT-MDD" = "LTMDD_only",
+                                  "AnyAnx" = "MINI.Any_Anx_2a_RECODE_1",
+                                  "GAD" = "MINI.GAD_2a_RECODE",
+                                  "LT-GAD" = "LTGAD_only",
+                                  "Antibiotics" = "MED.MEDS.Antibacterials_ATC_J01",
+                                  "PPIs" = "MED.MEDS.PPIs_ATC_A02BC",
+                                  "SSRIs" = "MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB",
+                                  "PTDs" = "CURRENT_TREATMENT.Mental_Health")
+
+        #Spearman correlation plot
+
+#plot_1
+corr_my_data_1 <- cor(my_data_1, method = "spearman", use="pairwise.complete.obs")
+
+#plot_1
+pdf(file = "correlations_manuscript_spearman.pdf", width = 6, height = 5, useDingbats = F)
+res1_1 = cor.mtest(corr_my_data_1, conf.level=.95)
+
+mental_health_spearman <- corrplot(corr_my_data_1, method="circle", p.mat=res1_1$p, type = "lower", diag = F,
+                               insig="label_sig", sig.level=c(.001, .01, .05), pch.cex=.7, pch.col="white",
+                               tl.col="black", tl.cex = 0.5, cl.cex = 0.5, na.label = " ", na.label.col = "white",
+                               mar=c(0,0,1,0))
+plot(mental_health_spearman)
+dev.off()
+
+        #Tetrachoric correlation plots
+
+#plot_2
+df_matrix <- data.matrix(my_data_2)
+corr_my_data_2 <- tetrachoric(df_matrix)
+corr_my_data_2_plot <- corr_my_data_2$rho
+res1_2 = cor.mtest(corr_my_data_2_plot, conf.level=.95)
+
+pdf(file = "correlations_manuscript_tetrachoric.pdf", width = 6, height = 5, useDingbats = F)
+
+
+mental_health_tetra <- corrplot(corr_my_data_2_plot, method="circle", p.mat=res1_2$p, type = "lower", diag = F,
+                               insig="label_sig", sig.level=c(.001, .01, .05), pch.cex=.7, pch.col="white",
+                               tl.col="black", tl.cex = 0.5, cl.cex = 0.5, na.label = " ", na.label.col = "white",
+                               mar=c(0,0,1,0))
+print(mental_health_tetra)
+dev.off()
+
+        # =============== 5. WRITE DATA   ================ ##
+
+write.table(corr_my_data_1, "correlations_spearman.txt", sep="\t", row.names=T, quote = F) 
+write.table(res1_1, "pvalues_spearman.txt", sep="\t", row.names=T, quote = F) 
+
+
+write.table(mental_health_tetra, "correlations_tetrachoric.txt", sep="\t", row.names=T, quote = F) 
+write.table(res1_2, "pvalues_tetrachoric.txt", sep="\t", row.names=T, quote = F) 

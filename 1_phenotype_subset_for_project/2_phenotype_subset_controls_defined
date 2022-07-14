@@ -1,0 +1,449 @@
+###     SCRIPT: DISEASE CONTROLS 
+###     AUTHOR(S): SIOBHAN BRUSHETT 
+###     DESCRIPTION: DEFINING DISEASE CONTROLS AND PERFORMING SUMMARY STATS OF DEPRESSION BY TREATMENT AND ANXIETY BY TREATMENT USING DISEASE CONTROLS
+###     PROJECT: PSYCH-MICROBIOME
+###     NOTE(S): 
+###     updated on 2022-03-12 to include Dysthymia
+
+##Contents of this file
+
+## 0. LOAD DATA
+## 1. DEFINE DISEASE CONTROL GROUPS
+## 2. RECODE MENTAL HEALTH VARIABLES BY DISEASE CONTROLS
+## 3. SUMMARY STATS TREATMENT GROUP BY DISEASE 
+## 4. UPSET PLOT: DISEASE BY TREATMENT INTERACTIONS
+## 5. UPSET PLOT: DISEASE INTERACTIONS
+## 6. UPSET PLOT: TREATMENT INTERACTIONS
+
+library(tidyverse)
+library(UpSetR)
+
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile_subset
+
+        ## =============== 0. LOAD DATA   ================ ##
+
+phenotypes = read.csv("27.08.2021_transformed_phenotypes.csv", header=T, as.is=T, sep=",", row.names = 1)
+dim(phenotypes)
+#7656  234
+
+        ## =============== 1. DEFINE DISEASE CONTROL GROUP   ================ ##
+
+#DISEASE CONTROL GROUP: CONTROLS WITHOUT ANY CURRENT DEPRESSION, WITHOUT ANY CURRENT ANXIETY, WITHOUT LIFETIME DEPRESSION, WITHOUT LIFETIME GAD
+
+phenotypes$disease_control <- NA
+
+phenotypes$disease_control [phenotypes$MINI.Any_Dep_2a_RECODE == "no_current_dep" & phenotypes$MINI.Any_Anx_2a_RECODE_1 == "no_current_anx"] <- 1 #lifetime variables not included to avoid reducing sample size unnecessarily
+table(phenotypes$disease_control)
+phenotypes$disease_control [phenotypes$MINI.Any_Dep_2a_RECODE=="any_current_dep" |phenotypes$MINI.Any_Anx_2a_RECODE_1=="any_current_anx" | 
+                              phenotypes$LTMDD_only == "lifetime_MDD_only" | phenotypes$LTGAD_only == "lifetime_GAD_only"] <- 0
+table(phenotypes$disease_control, useNA = "ifany")
+
+#0    1 <NA>
+#1189 5522  945
+
+##therefore,     1189 participants with mental health condition (as defined by MINI)
+#               5522 participants without current and lifetime depression AND anxiety 
+
+
+phenotypes$disease_control <- as.factor(phenotypes$disease_control)
+levels(phenotypes$disease_control)[levels(phenotypes$disease_control)=="0"] <- "disease"
+levels(phenotypes$disease_control)[levels(phenotypes$disease_control)=="1"] <- "control"
+
+table(phenotypes$disease_control, phenotypes$CURRENT_TREATMENT.Mental_Health, useNA="ifany")
+
+#               current_treatment_only          no_current_treatment
+#disease                    184                 1005
+#control                    165                 5357
+#<NA>                        24                  921
+
+
+        ## =============== 2. RECODE MENTAL HEALTH VARIABLES BY DISEASE CONTROLS   ================ ##
+
+#SUMMARY STATS RECORDED HERE: '27.08.2021_mental_health_disease_control_stats.xlsx'
+
+#MINI.MDD_2a_RECODE
+phenotypes$MDD_control <- NA
+phenotypes$MDD_control [phenotypes$MINI.MDD_2a_RECODE == "current_MDD"] <- 1
+phenotypes$MDD_control [phenotypes$disease_control == "control"] <- 0
+
+phenotypes$MDD_control <- as.factor(phenotypes$MDD_control)
+levels(phenotypes$MDD_control)[levels(phenotypes$MDD_control)=="1"] <- "current_MDD"
+levels(phenotypes$MDD_control)[levels(phenotypes$MDD_control)=="0"] <- "control"
+table(phenotypes$MDD_control, useNA = "ifany")
+prop.table(table(phenotypes$MDD_control))
+table(phenotypes$MINI.MDD_2a_RECODE, useNA = "ifany")
+
+#UPDATE: MINI.DYS_2a_RECODE
+phenotypes$DYS_control <- NA
+phenotypes$DYS_control [phenotypes$MINI.DYS_2a_RECODE == "current_DYS"] <- 1
+phenotypes$DYS_control [phenotypes$disease_control == "control"] <- 0
+
+phenotypes$DYS_control <- as.factor(phenotypes$DYS_control)
+levels(phenotypes$DYS_control)[levels(phenotypes$DYS_control)=="1"] <- "current_DYS"
+levels(phenotypes$DYS_control)[levels(phenotypes$DYS_control)=="0"] <- "control"
+table(phenotypes$DYS_control, useNA = "ifany")
+prop.table(table(phenotypes$DYS_control))
+table(phenotypes$MINI.DYS_2a_RECODE, useNA = "ifany")
+
+write.csv(phenotypes, "27.08.2021_transformed_phenotypes_control.csv")
+
+#MINI.Any_Dep_2a_RECODE
+phenotypes$AnyDep_control <- NA
+phenotypes$AnyDep_control [phenotypes$MINI.Any_Dep_2a_RECODE == "any_current_dep"] <- 1
+phenotypes$AnyDep_control [phenotypes$disease_control == "control"] <- 0
+table(phenotypes$AnyDep_control, useNA = "ifany")
+table(phenotypes$MINI.Any_Dep_2a_RECODE, useNA = "ifany")
+
+phenotypes$AnyDep_control <- as.factor(phenotypes$AnyDep_control)
+levels(phenotypes$AnyDep_control)[levels(phenotypes$AnyDep_control)=="1"] <- "any_current_dep"
+levels(phenotypes$AnyDep_control)[levels(phenotypes$AnyDep_control)=="0"] <- "control"
+table(phenotypes$AnyDep_control, useNA = "ifany")
+prop.table(table(phenotypes$AnyDep_control))
+
+#LTMDD_only
+phenotypes$LTMDDonly_control <- NA
+phenotypes$LTMDDonly_control [phenotypes$LTMDD_only == "lifetime_MDD_only"] <- 1
+phenotypes$LTMDDonly_control [phenotypes$disease_control == "control"] <- 0 
+table(phenotypes$LTMDDonly_control, useNA = "ifany")
+table(phenotypes$LTMDD_only, useNA = "ifany")
+
+phenotypes$LTMDDonly_control <- as.factor(phenotypes$LTMDDonly_control)
+levels(phenotypes$LTMDDonly_control)[levels(phenotypes$LTMDDonly_control)=="1"] <- "lifetime_MDD_only"
+levels(phenotypes$LTMDDonly_control)[levels(phenotypes$LTMDDonly_control)=="0"] <- "control"
+table(phenotypes$LTMDDonly_control, useNA = "ifany")
+prop.table(table(phenotypes$LTMDDonly_control))
+
+#LTMDD_severe_only
+phenotypes$LTMDDsevonly_control <- NA
+phenotypes$LTMDDsevonly_control [phenotypes$LTMDD_severe_only == "lifetime_MDD_severe_only"] <- 1
+phenotypes$LTMDDsevonly_control [phenotypes$disease_control == "control"] <- 0 
+table(phenotypes$LTMDDsevonly_control, useNA = "ifany")
+table(phenotypes$LTMDD_severe_only, useNA = "ifany")
+
+phenotypes$LTMDDsevonly_control <- as.factor(phenotypes$LTMDDsevonly_control)
+levels(phenotypes$LTMDDsevonly_control)[levels(phenotypes$LTMDDsevonly_control)=="1"] <- "lifetime_MDD_severe_only"
+levels(phenotypes$LTMDDsevonly_control)[levels(phenotypes$LTMDDsevonly_control)=="0"] <- "control"
+table(phenotypes$LTMDDsevonly_control, useNA = "ifany")
+prop.table(table(phenotypes$LTMDDsevonly_control))
+
+#MINI.GAD_2a_RECODE
+phenotypes$GAD_control <- NA
+phenotypes$GAD_control [phenotypes$MINI.GAD_2a_RECODE == "current_GAD"] <- 1
+phenotypes$GAD_control [phenotypes$disease_control == "control"] <- 0 
+table(phenotypes$GAD_control, useNA = "ifany")
+table(phenotypes$MINI.GAD_2a_RECODE, useNA = "ifany")
+
+phenotypes$GAD_control <- as.factor(phenotypes$GAD_control)
+levels(phenotypes$GAD_control)[levels(phenotypes$GAD_control)=="1"] <- "current_GAD"
+levels(phenotypes$GAD_control)[levels(phenotypes$GAD_control)=="0"] <- "control"
+table(phenotypes$GAD_control, useNA = "ifany")
+prop.table(table(phenotypes$GAD_control))
+
+#MINI.Any_Anx_2a_RECODE_1
+phenotypes$AnyAnx_control <- NA
+phenotypes$AnyAnx_control [phenotypes$MINI.Any_Anx_2a_RECODE_1 == "any_current_anx"] <- 1
+phenotypes$AnyAnx_control [phenotypes$disease_control == "control"] <- 0 
+table(phenotypes$AnyAnx_control, useNA = "ifany")
+table(phenotypes$MINI.Any_Anx_2a_RECODE_1, useNA = "ifany")
+
+phenotypes$AnyAnx_control <- as.factor(phenotypes$AnyAnx_control)
+levels(phenotypes$AnyAnx_control)[levels(phenotypes$AnyAnx_control)=="1"] <- "any_current_anx"
+levels(phenotypes$AnyAnx_control)[levels(phenotypes$AnyAnx_control)=="0"] <- "control"
+table(phenotypes$AnyAnx_control, useNA = "ifany")
+prop.table(table(phenotypes$AnyAnx_control))
+
+#LTGAD_only
+phenotypes$LTGADonly_control <- NA
+phenotypes$LTGADonly_control [phenotypes$LTGAD_only == "lifetime_GAD_only"] <- 1
+phenotypes$LTGADonly_control [phenotypes$disease_control == "control"] <- 0 
+table(phenotypes$LTGADonly_control, useNA = "ifany")
+table(phenotypes$LTGAD_only, useNA = "ifany")
+
+phenotypes$LTGADonly_control <- as.factor(phenotypes$LTGADonly_control)
+levels(phenotypes$LTGADonly_control)[levels(phenotypes$LTGADonly_control)=="1"] <- "lifetime_GAD_only"
+levels(phenotypes$LTGADonly_control)[levels(phenotypes$LTGADonly_control)=="0"] <- "control"
+table(phenotypes$LTGADonly_control, useNA = "ifany")
+prop.table(table(phenotypes$LTGADonly_control))
+
+#COMORBIDITY_control (updated March 2022)
+phenotypes$comorbidity_control <- NA
+phenotypes$comorbidity_control [phenotypes$MINI.Any_Dep_2a_RECODE == "any_current_dep" & phenotypes$MINI.Any_Anx_2a_RECODE_1 == "any_current_anx"] <- 1
+phenotypes$comorbidity_control [phenotypes$disease_control == "control"] <- 0
+
+phenotypes$comorbidity_control <- as.factor(phenotypes$comorbidity_control)
+levels(phenotypes$comorbidity_control)[levels(phenotypes$comorbidity_control)=="1"] <- "comorbidity"
+levels(phenotypes$comorbidity_control)[levels(phenotypes$comorbidity_control)=="0"] <- "control"
+table(phenotypes$comorbidity_control, useNA = "ifany")
+
+#qc check
+comorbid <- phenotypes %>% 
+        filter (comorbidity_control == "comorbidity")
+
+comorbid <- comorbid [, c("AnyDep_control", "AnyAnx_control",
+                          "MDD_control", "DYS_control", "GAD_control")]
+comorbid
+
+write.csv(phenotypes, "27.08.2021_transformed_phenotypes_control.csv")
+
+        ## =============== 3. SUMMARY STATS TREATMENT GROUP BY DISEASE  ================ ##
+
+        #MDD related phenotypes 
+
+#MDD_control
+table(phenotypes$MDD_control, phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+round(prop.table(table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH[phenotypes$MDD_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH[phenotypes$MDD_control=="current_MDD"]))*100, digits =1)
+fisher.test(phenotypes$MDD_control, phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+
+table(phenotypes$MDD_control, phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+round(prop.table(table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05[phenotypes$MDD_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05[phenotypes$MDD_control=="current_MDD"]))*100, digits =1)
+fisher.test(phenotypes$MDD_control, phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+
+table(phenotypes$MDD_control, phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+round(prop.table(table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06[phenotypes$MDD_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06[phenotypes$MDD_control=="current_MDD"]))*100, digits =1)
+fisher.test(phenotypes$MDD_control, phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+
+table(phenotypes$MDD_control, phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+round(prop.table(table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05[phenotypes$MDD_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05[phenotypes$MDD_control=="current_MDD"]))*100, digits =1)
+fisher.test(phenotypes$MDD_control, phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+
+table(phenotypes$MDD_control, phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+round(prop.table(table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB[phenotypes$MDD_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB[phenotypes$MDD_control=="current_MDD"]))*100, digits =1)
+fisher.test(phenotypes$MDD_control, phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+
+table(phenotypes$MDD_control, phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+round(prop.table(table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA[phenotypes$MDD_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA[phenotypes$MDD_control=="current_MDD"]))*100, digits =1)
+fisher.test(phenotypes$MDD_control, phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+
+table(phenotypes$MDD_control, phenotypes$CURRENT_TREATMENT.Mental_Health)
+round(prop.table(table(phenotypes$CURRENT_TREATMENT.Mental_Health[phenotypes$MDD_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$CURRENT_TREATMENT.Mental_Health[phenotypes$MDD_control=="current_MDD"]))*100, digits =1)
+fisher.test(phenotypes$MDD_control, phenotypes$CURRENT_TREATMENT.Mental_Health)
+
+
+#AnyDep_control
+table(phenotypes$AnyDep_control, phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+round(prop.table(table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH[phenotypes$AnyDep_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH[phenotypes$AnyDep_control=="any_current_dep"]))*100, digits =1)
+fisher.test(phenotypes$AnyDep_control, phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+
+table(phenotypes$AnyDep_control, phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+round(prop.table(table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05[phenotypes$AnyDep_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05[phenotypes$AnyDep_control=="any_current_dep"]))*100, digits =1)
+fisher.test(phenotypes$AnyDep_control, phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+
+table(phenotypes$AnyDep_control, phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+round(prop.table(table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06[phenotypes$AnyDep_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06[phenotypes$AnyDep_control=="any_current_dep"]))*100, digits =1)
+fisher.test(phenotypes$AnyDep_control, phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+
+table(phenotypes$AnyDep_control, phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+round(prop.table(table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05[phenotypes$AnyDep_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05[phenotypes$AnyDep_control=="any_current_dep"]))*100, digits =1)
+fisher.test(phenotypes$AnyDep_control, phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+
+table(phenotypes$AnyDep_control, phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+round(prop.table(table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB[phenotypes$AnyDep_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB[phenotypes$AnyDep_control=="any_current_dep"]))*100, digits =1)
+fisher.test(phenotypes$AnyDep_control, phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+
+table(phenotypes$AnyDep_control, phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+round(prop.table(table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA[phenotypes$AnyDep_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA[phenotypes$AnyDep_control=="any_current_dep"]))*100, digits =1)
+fisher.test(phenotypes$AnyDep_control, phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+
+table(phenotypes$AnyDep_control, phenotypes$CURRENT_TREATMENT.Mental_Health)
+round(prop.table(table(phenotypes$CURRENT_TREATMENT.Mental_Health[phenotypes$AnyDep_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$CURRENT_TREATMENT.Mental_Health[phenotypes$AnyDep_control=="any_current_dep"]))*100, digits =1)
+fisher.test(phenotypes$AnyDep_control, phenotypes$CURRENT_TREATMENT.Mental_Health)
+
+
+#LTMDDonly_control
+table(phenotypes$LTMDDonly_control, phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+round(prop.table(table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH[phenotypes$LTMDDonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH[phenotypes$LTMDDonly_control=="lifetime_MDD_only"]))*100, digits =1)
+fisher.test(phenotypes$LTMDDonly_control, phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+
+table(phenotypes$LTMDDonly_control, phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+round(prop.table(table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05[phenotypes$LTMDDonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05[phenotypes$LTMDDonly_control=="lifetime_MDD_only"]))*100, digits =1)
+fisher.test(phenotypes$LTMDDonly_control, phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+
+table(phenotypes$LTMDDonly_control, phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+round(prop.table(table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06[phenotypes$LTMDDonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06[phenotypes$LTMDDonly_control=="lifetime_MDD_only"]))*100, digits =1)
+fisher.test(phenotypes$LTMDDonly_control, phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+
+table(phenotypes$LTMDDonly_control, phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+round(prop.table(table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05[phenotypes$LTMDDonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05[phenotypes$LTMDDonly_control=="lifetime_MDD_only"]))*100, digits =1)
+fisher.test(phenotypes$LTMDDonly_control, phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+
+table(phenotypes$LTMDDonly_control, phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+round(prop.table(table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB[phenotypes$LTMDDonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB[phenotypes$LTMDDonly_control=="lifetime_MDD_only"]))*100, digits =1)
+fisher.test(phenotypes$LTMDDonly_control, phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+
+table(phenotypes$LTMDDonly_control, phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+round(prop.table(table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA[phenotypes$LTMDDonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA[phenotypes$LTMDDonly_control=="lifetime_MDD_only"]))*100, digits =1)
+fisher.test(phenotypes$LTMDDonly_control, phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+
+table(phenotypes$LTMDDonly_control, phenotypes$CURRENT_TREATMENT.Mental_Health)
+round(prop.table(table(phenotypes$CURRENT_TREATMENT.Mental_Health[phenotypes$LTMDDonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$CURRENT_TREATMENT.Mental_Health[phenotypes$LTMDDonly_control=="lifetime_MDD_only"]))*100, digits =1)
+fisher.test(phenotypes$LTMDDonly_control, phenotypes$CURRENT_TREATMENT.Mental_Health)
+
+#LTMDDsevonly_control
+table(phenotypes$LTMDDsevonly_control, phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+round(prop.table(table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH[phenotypes$LTMDDsevonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH[phenotypes$LTMDDsevonly_control=="lifetime_MDD_severe_only"]))*100, digits =1)
+fisher.test(phenotypes$LTMDDsevonly_control, phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+
+table(phenotypes$LTMDDsevonly_control, phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+round(prop.table(table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05[phenotypes$LTMDDsevonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05[phenotypes$LTMDDsevonly_control=="lifetime_MDD_severe_only"]))*100, digits =1)
+fisher.test(phenotypes$LTMDDsevonly_control, phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+
+table(phenotypes$LTMDDsevonly_control, phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+round(prop.table(table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06[phenotypes$LTMDDsevonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06[phenotypes$LTMDDsevonly_control=="lifetime_MDD_severe_only"]))*100, digits =1)
+fisher.test(phenotypes$LTMDDsevonly_control, phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+
+table(phenotypes$LTMDDsevonly_control, phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+round(prop.table(table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05[phenotypes$LTMDDsevonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05[phenotypes$LTMDDsevonly_control=="lifetime_MDD_severe_only"]))*100, digits =1)
+fisher.test(phenotypes$LTMDDsevonly_control, phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+
+table(phenotypes$LTMDDsevonly_control, phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+round(prop.table(table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB[phenotypes$LTMDDsevonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB[phenotypes$LTMDDsevonly_control=="lifetime_MDD_severe_only"]))*100, digits =1)
+fisher.test(phenotypes$LTMDDsevonly_control, phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+
+table(phenotypes$LTMDDsevonly_control, phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+round(prop.table(table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA[phenotypes$LTMDDsevonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA[phenotypes$LTMDDsevonly_control=="lifetime_MDD_severe_only"]))*100, digits =1)
+fisher.test(phenotypes$LTMDDsevonly_control, phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+
+table(phenotypes$LTMDDsevonly_control, phenotypes$CURRENT_TREATMENT.Mental_Health)
+round(prop.table(table(phenotypes$CURRENT_TREATMENT.Mental_Health[phenotypes$LTMDDsevonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$CURRENT_TREATMENT.Mental_Health[phenotypes$LTMDDsevonly_control=="lifetime_MDD_severe_only"]))*100, digits =1)
+fisher.test(phenotypes$LTMDDsevonly_control, phenotypes$CURRENT_TREATMENT.Mental_Health)
+
+        #GAD related phenotypes 
+
+#GAD_control
+
+table(phenotypes$GAD_control, phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+round(prop.table(table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH[phenotypes$GAD_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH[phenotypes$GAD_control=="current_GAD"]))*100, digits =1)
+fisher.test(phenotypes$GAD_control, phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+
+table(phenotypes$GAD_control, phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+round(prop.table(table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05[phenotypes$GAD_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05[phenotypes$GAD_control=="current_GAD"]))*100, digits =1)
+fisher.test(phenotypes$GAD_control, phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+
+table(phenotypes$GAD_control, phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+round(prop.table(table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06[phenotypes$GAD_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06[phenotypes$GAD_control=="current_GAD"]))*100, digits =1)
+fisher.test(phenotypes$GAD_control, phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+
+table(phenotypes$GAD_control, phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+round(prop.table(table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05[phenotypes$GAD_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05[phenotypes$GAD_control=="current_GAD"]))*100, digits =1)
+fisher.test(phenotypes$GAD_control, phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+
+table(phenotypes$GAD_control, phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+round(prop.table(table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB[phenotypes$GAD_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB[phenotypes$GAD_control=="current_GAD"]))*100, digits =1)
+fisher.test(phenotypes$GAD_control, phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+
+table(phenotypes$GAD_control, phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+round(prop.table(table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA[phenotypes$GAD_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA[phenotypes$GAD_control=="current_GAD"]))*100, digits =1)
+fisher.test(phenotypes$GAD_control, phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+
+table(phenotypes$GAD_control, phenotypes$CURRENT_TREATMENT.Mental_Health)
+round(prop.table(table(phenotypes$CURRENT_TREATMENT.Mental_Health[phenotypes$GAD_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$CURRENT_TREATMENT.Mental_Health[phenotypes$GAD_control=="current_GAD"]))*100, digits =1)
+fisher.test(phenotypes$GAD_control, phenotypes$CURRENT_TREATMENT.Mental_Health)
+
+#AnyAnx_control
+
+table(phenotypes$AnyAnx_control, phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+round(prop.table(table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH[phenotypes$AnyAnx_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH[phenotypes$AnyAnx_control=="any_current_anx"]))*100, digits =1)
+fisher.test(phenotypes$AnyAnx_control, phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+
+table(phenotypes$AnyAnx_control, phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+round(prop.table(table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05[phenotypes$AnyAnx_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05[phenotypes$AnyAnx_control=="any_current_anx"]))*100, digits =1)
+fisher.test(phenotypes$AnyAnx_control, phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+
+table(phenotypes$AnyAnx_control, phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+round(prop.table(table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06[phenotypes$AnyAnx_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06[phenotypes$AnyAnx_control=="any_current_anx"]))*100, digits =1)
+fisher.test(phenotypes$AnyAnx_control, phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+
+table(phenotypes$AnyAnx_control, phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+round(prop.table(table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05[phenotypes$AnyAnx_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05[phenotypes$AnyAnx_control=="any_current_anx"]))*100, digits =1)
+fisher.test(phenotypes$AnyAnx_control, phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+
+table(phenotypes$AnyAnx_control, phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+round(prop.table(table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB[phenotypes$AnyAnx_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB[phenotypes$AnyAnx_control=="any_current_anx"]))*100, digits =1)
+fisher.test(phenotypes$AnyAnx_control, phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+
+table(phenotypes$AnyAnx_control, phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+round(prop.table(table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA[phenotypes$AnyAnx_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA[phenotypes$AnyAnx_control=="any_current_anx"]))*100, digits =1)
+fisher.test(phenotypes$AnyAnx_control, phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+
+table(phenotypes$AnyAnx_control, phenotypes$CURRENT_TREATMENT.Mental_Health)
+round(prop.table(table(phenotypes$CURRENT_TREATMENT.Mental_Health[phenotypes$AnyAnx_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$CURRENT_TREATMENT.Mental_Health[phenotypes$AnyAnx_control=="any_current_anx"]))*100, digits =1)
+fisher.test(phenotypes$AnyAnx_control, phenotypes$CURRENT_TREATMENT.Mental_Health)
+
+#LTGADonly_control
+
+table(phenotypes$LTGADonly_control, phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+round(prop.table(table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH[phenotypes$LTGADonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH[phenotypes$LTGADonly_control=="lifetime_GAD_only"]))*100, digits =1)
+fisher.test(phenotypes$LTGADonly_control, phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+
+table(phenotypes$LTGADonly_control, phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+round(prop.table(table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05[phenotypes$LTGADonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05[phenotypes$LTGADonly_control=="lifetime_GAD_only"]))*100, digits =1)
+fisher.test(phenotypes$LTGADonly_control, phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+
+table(phenotypes$LTGADonly_control, phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+round(prop.table(table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06[phenotypes$LTGADonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06[phenotypes$LTGADonly_control=="lifetime_GAD_only"]))*100, digits =1)
+fisher.test(phenotypes$LTGADonly_control, phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+
+table(phenotypes$LTGADonly_control, phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+round(prop.table(table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05[phenotypes$LTGADonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05[phenotypes$LTGADonly_control=="lifetime_GAD_only"]))*100, digits =1)
+fisher.test(phenotypes$LTGADonly_control, phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+
+table(phenotypes$LTGADonly_control, phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+round(prop.table(table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB[phenotypes$LTGADonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB[phenotypes$LTGADonly_control=="lifetime_GAD_only"]))*100, digits =1)
+fisher.test(phenotypes$LTGADonly_control, phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+
+table(phenotypes$LTGADonly_control, phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+round(prop.table(table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA[phenotypes$LTGADonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA[phenotypes$LTGADonly_control=="lifetime_GAD_only"]))*100, digits =1)
+fisher.test(phenotypes$LTGADonly_control, phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+
+table(phenotypes$LTGADonly_control, phenotypes$CURRENT_TREATMENT.Mental_Health)
+round(prop.table(table(phenotypes$CURRENT_TREATMENT.Mental_Health[phenotypes$LTGADonly_control=="control"]))*100, digits =1)
+round(prop.table(table(phenotypes$CURRENT_TREATMENT.Mental_Health[phenotypes$LTGADonly_control=="lifetime_GAD_only"]))*100, digits =1)
+fisher.test(phenotypes$LTGADonly_control, phenotypes$CURRENT_TREATMENT.Mental_Health)

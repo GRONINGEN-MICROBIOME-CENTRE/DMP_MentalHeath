@@ -1,0 +1,125 @@
+        
+        ## =============== FACTORIZATION OF VARIABLES ================ ##
+
+#1. factorising variables
+
+#a. case-controls
+#NOTE: controls n = 5522
+
+        #MDD control
+phenotypes$MDD_control <- factor(phenotypes$MDD_control, levels=c("control", "current_MDD"))
+table(phenotypes$MDD_control, useNA = "ifany")
+#MDD = 156
+
+        #DYS_control
+phenotypes$DYS_control <- factor(phenotypes$DYS_control, levels=c("control", "current_DYS"))
+table(phenotypes$DYS_control, useNA = "ifany")
+#DYS = 70
+
+        #AnyDep control
+phenotypes$AnyDep_control <- factor(phenotypes$AnyDep_control, levels=c("control", "any_current_dep"))
+table(phenotypes$AnyDep_control, useNA = "ifany")
+#AnyDep = 226
+
+        #LTMDDonly_control
+phenotypes$LTMDDonly_control <- factor(phenotypes$LTMDDonly_control, levels=c("control", "lifetime_MDD_only"))
+table(phenotypes$LTMDDonly_control, useNA = "ifany")
+#LTMDDonly = 749
+
+        #GAD control
+phenotypes$GAD_control <- factor(phenotypes$GAD_control, levels=c("control", "current_GAD"))
+table(phenotypes$GAD_control, useNA = "ifany")
+#GAD = 339
+
+        #AnyAnx control
+phenotypes$AnyAnx_control <- factor(phenotypes$AnyAnx_control, levels=c("control", "any_current_anx"))
+table(phenotypes$AnyAnx_control, useNA = "ifany")
+#AnyAnx = 385
+
+        #LTGADonly_control
+phenotypes$LTGADonly_control <- factor(phenotypes$LTGADonly_control, levels=c("control", "lifetime_GAD_only"))
+table(phenotypes$LTGADonly_control, useNA = "ifany")
+#LTGADonly = 243
+
+        #comorbidity_control
+#phenotypes$comorbidity_control <- factor(phenotypes$comorbidity_control, levels=c("control", "comorbidity"))
+#table(phenotypes$comorbidity_control, useNA = "ifany")
+#comorbidity = 120
+
+#b. treatments
+
+phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH <- as.factor(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH)
+table(phenotypes$MED.MEDS.Antipsychotics_atypical_ATC_N05AH, useNA = "ifany")
+#N    Y
+#7633   23
+
+phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05 <- as.factor(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05)
+table(phenotypes$MED.MEDS.Benzodiazepine_agonists_ATC_N05, useNA = "ifany")
+#N    Y
+#7617   39
+
+phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06 <- as.factor(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06)
+table(phenotypes$MED.MEDS.Psychoanaleptics_ATC_N06, useNA = "ifany")
+#N    Y
+#7623   33
+
+phenotypes$MED.MEDS.Psycholeptics_ATC_N05 <- as.factor(phenotypes$MED.MEDS.Psycholeptics_ATC_N05)
+table(phenotypes$MED.MEDS.Psycholeptics_ATC_N05, useNA = "ifany")
+#N    Y
+#7637   19
+
+phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB <- as.factor(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB)
+table(phenotypes$MED.MEDS.Seratonine_uptake_inhibitors_selective_ATC_N06AB, useNA = "ifany")
+#N    Y
+#7422  234
+
+phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA <- as.factor(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA)
+table(phenotypes$MED.MEDS.Tricyclic_antidepressants_ATC_N06AA, useNA = "ifany")
+#N    Y
+#7585   71
+
+phenotypes$CURRENT_TREATMENT.Mental_Health <- as.factor(phenotypes$CURRENT_TREATMENT.Mental_Health)
+table(phenotypes$CURRENT_TREATMENT.Mental_Health, useNA = "ifany")
+#   N    Y
+#7283  373
+
+#phenotypes$META.Antibiotics_3m <- as.factor(phenotypes$META.Antibiotics_3m)
+#table(phenotypes$META.Antibiotics_3m, useNA = "ifany")
+#N    Y <NA>
+#5900  462 1294
+
+phenotypes$MED.MEDS.Antibacterials_ATC_J01 <- as.factor(phenotypes$MED.MEDS.Antibacterials_ATC_J01)
+table(phenotypes$MED.MEDS.Antibacterials_ATC_J01, useNA = "ifany")
+#N    Y
+#7606   50
+
+#c. covariates
+phenotypes$MED.MEDS.PPIs_ATC_A02BC <- as.factor(phenotypes$MED.MEDS.PPIs_ATC_A02BC)
+table(phenotypes$MED.MEDS.PPIs_ATC_A02BC, useNA = "ifany")
+#N    Y
+#7111  545
+
+phenotypes$ANTHRO.Sex <- factor(phenotypes$ANTHRO.Sex, levels = c("M", "F"))
+str(phenotypes$ANTHRO.Sex)
+
+phenotypes$META.BATCH <- factor(phenotypes$META.BATCH, levels = c ("dag3_batch1",
+                                                                   "dag3_batch2",
+                                                                   "dag3_batch3",
+                                                                   "dag3_batch4",
+                                                                   "dag3_batch5",
+                                                                   "dag3_batch6",
+                                                                   "dag3_batch7"))
+str(phenotypes$META.BATCH)
+
+
+#make numeric
+phenotypes$ANTHRO.AGE <- as.numeric(phenotypes$ANTHRO.AGE)
+table(phenotypes$ANTHRO.AGE, useNA = "ifany")
+
+phenotypes$EXP.DIET.Scores.LLDietScore <- as.numeric(phenotypes$EXP.DIET.Scores.LLDietScore)
+table(phenotypes$EXP.DIET.Scores.LLDietScore, useNA = "ifany")
+
+phenotypes$META.DNA.conc.ng.ul <- as.numeric(phenotypes$META.DNA.conc.ng.ul)
+phenotypes$META.DNA.postclean.reads <- as.numeric(phenotypes$META.DNA.postclean.reads)
+phenotypes$META.POOP.BristolMean <- as.numeric(phenotypes$META.POOP.BristolMean)
+phenotypes$META.POOP.Freq <- as.numeric(phenotypes$META.POOP.Freq)

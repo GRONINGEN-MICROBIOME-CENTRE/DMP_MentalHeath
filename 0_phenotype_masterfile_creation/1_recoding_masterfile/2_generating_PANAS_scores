@@ -1,0 +1,58 @@
+###     SCRIPT: PANAS_SCORE
+###     AUTHOR(S): SIOBHAN BRUSHETT (AND LIAN)
+###     DESCRIPTION: GENERATION OF POSITIVE AND NEGATIVE EFFECT SCORES
+###     PROJECT: PSYCH-MICROBIOME
+###     NOTE(S): PANAS ITEMS IN WAVE 2B WERE SHORTENDED FROM 20 ITEMS (AS IN WAVE 1A) TO ONLY 10 ITEMS
+
+##Contents of this file
+
+## 0. LOAD DATA
+## 1. ASSIGN PANAS ITEMS (WAVE 2B)
+## 2. CALCULATE SUBSCALES
+ 
+
+
+        ## =============== 0. LOAD DATA   ================ ##
+
+masterfile <- read.csv("18.05.2021_Masterfile_rec_sym.csv", header=T, as.is=T, sep=",")
+str(masterfile)
+
+        ## =============== 1. ASSIGN PANAS ITEMS (WAVE 2B) ================ ##   
+
+## ASSIGN PANAS-ITEMS TO THE FOLLOWING SUBSCALES :
+
+#    Positive_affect   =  alert, inspired, determined, attentive, active
+#    Negative_affect   =  upset, scared, hostile, ashamed, nervous
+
+
+positive_affect <- c("panas_alert_2b", "panas_inspired_2b","panas_determined_2b", "panas_attentive_2b","panas_active_2b")
+negative_affect <- c("panas_upset_2b", "panas_scared_2b","panas_hostile_2b", "panas_ashamed_2b","panas_nervous_2b")
+
+#therefore, final score can range from 5 to 25 for each subscale
+
+        ## =============== 2. CALCULATE SUBSCALES ================ ##  
+
+masterfile$NA_PA             <- apply(is.na(masterfile[,positive_affect]),1,sum) 
+masterfile$NA_NA             <- apply(is.na(masterfile[,negative_affect]),1,sum)
+
+masterfile$positive_affect_2b                      <- apply(masterfile[,positive_affect],1,sum,na.rm=TRUE) 
+masterfile$positive_affect_2b[masterfile$NA_PA>=1] <-  NA
+table(masterfile$positive_affect_2b, useNA='ifany')
+#5     6     7     8     9    10    11    12    13    14    15    16    17
+##300    44   134   152   226   378   546   870  1416  2454  4321  5819  7724
+
+#18    19    20    21    22    23    24    25  <NA>
+##    9653 10923  9946  4063  2106  1081   509   338 91777
+
+
+masterfile$negative_affect_2b                      <- apply(masterfile[,negative_affect],1,sum,na.rm=TRUE) 
+masterfile$negative_affect_2b[masterfile$NA_NA>=1] <-  NA
+table(masterfile$negative_affect_2b, useNA='ifany')
+#5     6     7     8     9    10    11    12    13    14    15    16    17
+##8548  7441  8782  8231  7437  6597  5055  3723  2718  1818  1231   724   441
+
+#18    19    20    21    22    23    24    25  <NA>
+##277   137    90    28    24    12     4     3 91459
+
+write.csv(masterfile, "/groups/umcg-lifelines/tmp01/users/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/WorkingDirectory/18.05.2021_Masterfile_rec_sym_PANAS.csv")
+#updated location: /groups/umcg-lifelines/tmp01/projects/dag3_fecal_mgs/umcg-snbrushett/04.05.2021_DAG3_MentalHealth/masterfile
